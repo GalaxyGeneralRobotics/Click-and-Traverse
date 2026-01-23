@@ -4,7 +4,7 @@ This repository provides the **official implementation** of the paper:
 
 > **Collision-Free Humanoid Traversal in Cluttered Indoor Scenes**  
 > *Han Xue et al.*  
-> arXiv preprint: [arXiv:2601.16035](https://arxiv.org/abs/2601.16035).
+> arXiv preprint: [arXiv:2601.16035](https://arxiv.org/abs/2601.16035).<br>
 > project page: [https://axian12138.github.io/CAT/](https://axian12138.github.io/CAT/).
 
 
