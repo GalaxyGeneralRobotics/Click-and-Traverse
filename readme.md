@@ -1,4 +1,4 @@
-# <h1><img src="assets/icon.png" width="40" style="vertical-align: middle;">  Click and Traverse </h1>
+<h1><img src="assets/icon.png" width="40" style="vertical-align: middle;">  Click and Traverse </h1>
 
 This repository provides the **official implementation** of the paper:
 
