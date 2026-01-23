@@ -390,7 +390,6 @@ def train(
 
     optimizer = optax.adam(learning_rate=learning_rate)
     if max_grad_norm is not None:
-        # TODO: Move gradient clipping to `training/gradients.py`.
         optimizer = optax.chain(
             optax.clip_by_global_norm(max_grad_norm),
             optax.adam(learning_rate=learning_rate),

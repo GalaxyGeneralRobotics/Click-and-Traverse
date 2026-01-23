@@ -21,8 +21,8 @@ import numpy as np
 from cat_ppo.constant import PATH_ASSET
 
 ROOT_PATH = PATH_ASSET / "unitree_g1"
-FEET_ONLY_FLAT_TERRAIN_XML = ROOT_PATH / "scene_mjx_feetonly_flat_terrain.xml"
-MESH_XML = ROOT_PATH / "scene_mjx_feetonly_mesh.xml"
+FEET_ONLY_FLAT_TERRAIN_XML = ROOT_PATH / "scene_mjx_feetonly_flat_terrain.xml" # for training
+MESH_XML = ROOT_PATH / "scene_mjx_feetonly_mesh.xml" # for testing with visualization
 
 
 def task_to_xml(task_name: str) -> Path:

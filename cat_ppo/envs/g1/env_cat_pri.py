@@ -32,7 +32,7 @@ import cat_ppo
 from cat_ppo.envs.g1.env_loco import G1LocoEnv
 from cat_ppo.envs.g1 import constants as consts
 
-ENABLE_RANDOMIZE = True # NOTE
+ENABLE_RANDOMIZE = False
 
 
 def g1_loco_task_config() -> config_dict.ConfigDict:
@@ -52,9 +52,7 @@ def g1_loco_task_config() -> config_dict.ConfigDict:
         restricted_joint_range=False,
         soft_joint_pos_limit_factor=0.95,
         gait_config=config_dict.create(
-            # freq_range=[1.0, 1.1],
-            # foot_height_range=[0.2, 0.3],
-            gait_bound=0.6,  # soft constraint ratio 0~1 #  # NOTE
+            gait_bound=0.6,
             freq_range=[1.3, 1.5],
             foot_height_range=[0.05, 0.05],
         ),
@@ -81,13 +79,13 @@ def g1_loco_task_config() -> config_dict.ConfigDict:
             scales=config_dict.create(
                 # behavior reward
                 tracking_orientation=2.0,
-                tracking_lin_vel=1.0,
+                tracking_root_field=1.0,
                 body_motion=-0.5,
                 body_rotation=1.0,
-                feet_rotation=1.0, # NOTE
+                feet_rotation=1.0,
                 foot_contact=-1.0,
-                foot_clearance=-15.0, # NOTE -15
-                foot_slip=-0.5, # NOTE -0.5
+                foot_clearance=-15.0, 
+                foot_slip=-0.5, 
                 foot_balance=-10,
                 straight_knee = -30,
                 # energy reward
@@ -98,7 +96,7 @@ def g1_loco_task_config() -> config_dict.ConfigDict:
                 # field
                 headgf=0.0,
                 handsgf=0.0,
-                feetgf=0.0, # NOTE
+                feetgf=0.0,
                 headdf=0.0,
                 handsdf=0.0,
                 feetdf=0.0,
@@ -108,14 +106,14 @@ def g1_loco_task_config() -> config_dict.ConfigDict:
             base_height_target=0.75,
             foot_height_stance=0.0,
         ),
-        term_collision_threshold=0.04,  # NOTE
+        term_collision_threshold=0.04,
         push_config=config_dict.create(
             enable=True,
             interval_range=[5.0, 10.0],
             magnitude_range=[0.1, 1.0],
         ),
         command_config=config_dict.create(
-            resampling_time=10.0,  # command changed time [s]
+            resampling_time=10.0, 
             stop_prob=0.2,
         ),
         lin_vel_x=[-0.5, 0.5],
@@ -132,7 +130,6 @@ def g1_loco_task_config() -> config_dict.ConfigDict:
     policy_config = config_dict.create(
         num_timesteps=5_000_000_000,
         max_devices_per_host=8,
-        # high-level control flow
         wrap_env=True,
         madrona_backend=False,
         augment_pixels=False,
@@ -147,7 +144,7 @@ def g1_loco_task_config() -> config_dict.ConfigDict:
         entropy_cost=0.01,
         discounting=0.97,
         unroll_length=20,
-        batch_size=1024,  # 256, 512, 1024
+        batch_size=1024,  
         num_minibatches=32,
         num_updates_per_batch=4,
         num_resets_per_eval=0,
@@ -179,7 +176,7 @@ def g1_loco_task_config() -> config_dict.ConfigDict:
         save_checkpoint_path=None,
         restore_checkpoint_path=None, 
         restore_params=None,
-        restore_value_fn=False, # NOTE
+        restore_value_fn=False,
     )
 
     # vel: move_flag[0|1], x[m], y[m], yaw[rad]
@@ -251,13 +248,6 @@ def torque_step(
     return jax.lax.scan(single_step, (rng, data), (), n_substeps)[0]
 
 
-# command define
-# [0]: move_flag (0: stop, 1: move)
-# [1]: x linear velocity
-# [2]: y linear velocity
-# [3]: yaw angular velocity
-
-
 @cat_ppo.registry.register("G1CatPri", "train_env_class")
 class G1CatPriEnv(G1LocoEnv):
     """Track a joystick command."""
@@ -311,9 +301,7 @@ class G1CatPriEnv(G1LocoEnv):
         qvel = qvel.at[0:6].set(jax.random.uniform(key, (6,), minval=-0.5, maxval=0.5))
         data = mjx_env.init(self.mjx_model, qpos=qpos, qvel=qvel, ctrl=qpos[7:])
 
-        # rng, cmd_rng = jax.random.split(rng)
         rtf = self.sample_field(self.gf, data.site_xpos[self._pelvis_imu_site_id].reshape(1, -1)).reshape(-1)
-        # command = self.compute_cmd_from_rtf(rtf)
         head_pos = data.site_xpos[self._head_site_id]
         head_vel = jp.zeros_like(head_pos)
         headgf = self.sample_field(self.gf, head_pos.reshape(1, -1))
@@ -336,7 +324,6 @@ class G1CatPriEnv(G1LocoEnv):
         shldsbf = self.sample_field(self.bf, shlds_pos)
         shldsdf = self.sample_field(self.sdf, shlds_pos)
         command = self.compute_cmd_from_rtf(rtf, jp.concat([headgf, feetgf, handsgf], axis=0), jp.concat([headbf, feetbf, handsbf], axis=0))
-        # command = self.compute_cmd_from_rtf(rtf, jp.concat([feetgf], axis=0), jp.concat([feetbf], axis=0))
 
         # Sample push interval.
         rng, push_rng = jax.random.split(rng)
@@ -391,20 +378,6 @@ class G1CatPriEnv(G1LocoEnv):
         rfi_lim_scale = self._config.dm_rand_config.rfi_lim * rfi_lim_noise_scale * self.torque_limit
         rfi_lim_scale = jp.where(self._config.dm_rand_config.enable_rfi, rfi_lim_scale, jp.zeros_like(rfi_lim_scale))
 
-        # control delay
-        # delay_steps = jax.random.randint(
-        #     key_delay,
-        #     shape=(),
-        #     minval=self._config.dm_rand_config.ctrl_delay_range[0],
-        #     maxval=self._config.dm_rand_config.ctrl_delay_range[1] + 1,
-        # )
-        # delay_steps = jp.where(
-        #     self._config.dm_rand_config.enable_ctrl_delay, delay_steps, jp.zeros_like(delay_steps, dtype=jp.int32)
-        # )
-
-        # motor_targets_history = jp.repeat(
-        #     self._default_qpos.reshape(1, -1), self._config.dm_rand_config.ctrl_delay_range[1] + 1, axis=0
-        # )
         info = {
             "rng": rng,
             "step": 0,
@@ -415,19 +388,15 @@ class G1CatPriEnv(G1LocoEnv):
             "last_last_act": jp.zeros(self.action_size),
             "last_feet_vel": jp.zeros(2),
             "last_joint_vel": np.zeros(self.num_joints),
-            # "obs_history": jp.zeros((self._config.history_len, self._config.num_obs)),
             # push
             "push": jp.array([0.0, 0.0]),
             "push_step": 0,
             "push_interval_steps": push_interval_steps,
             # state
             "motor_targets": self._default_qpos.copy(),
-            # "motor_targets_history": motor_targets_history,
             "local_lin_vel": jp.zeros(3),
             "global_lin_vel": jp.zeros(3),
             "global_ang_vel": jp.zeros(3),
-            # "left_foot_force": jp.zeros(3),
-            # "right_foot_force": jp.zeros(3),
             "navi2world_rot": jp.eye(3),
             "navi2world_pose": jp.eye(4),
             "navi_torso_rpy": jp.zeros(3),
@@ -447,7 +416,6 @@ class G1CatPriEnv(G1LocoEnv):
             "kp_scale": kp_scale,
             "kd_scale": kd_scale,
             "rfi_lim_scale": rfi_lim_scale,
-            # "delay_steps": delay_steps,
             "rtf": rtf.copy(),
             "headgf": headgf.copy(),
             "headbf": headbf.copy(),
@@ -469,17 +437,10 @@ class G1CatPriEnv(G1LocoEnv):
             "hands_pos": hands_pos.copy(),
             "hands_vel": hands_vel.copy(),
         }
-        # update gait state
 
         metrics = {}
         for k in self._config.reward_config.scales.keys():
             metrics[f"reward/{k}"] = jp.zeros(())
-        # metrics["info/headdf"] = headdf.min()
-        # metrics["info/handsdf"] = handsdf.min()
-        # metrics["info/feetdf"] = feetdf.min()
-        # metrics["info/headk"] = jp.zeros(())
-        # metrics["info/handsk"] = jp.zeros(())
-        # metrics["info/feetk"] = jp.zeros(())
 
         contact = jp.array([geoms_colliding(data, geom_id, self._floor_geom_id) for geom_id in self._feet_geom_id])
         obs = self._get_obs(data, info, contact)
@@ -505,8 +466,6 @@ class G1CatPriEnv(G1LocoEnv):
         state = state.replace(data=data)
 
         # set motor target
-        # lower_motor_targets = self._default_qpos[self.action_joint_ids] + action * self._config.action_scale
-        # Action Space 1: delta position from last motor targets
         lower_motor_targets = jp.clip(
             state.info["motor_targets"][self.action_joint_ids]
             + action * self._config.action_scale,
@@ -515,10 +474,7 @@ class G1CatPriEnv(G1LocoEnv):
         )
         motor_targets = self._default_qpos.copy()
         motor_targets = motor_targets.at[self.action_joint_ids].set(lower_motor_targets)
-        # _motor_targets_history = jp.roll(state.info["motor_targets_history"], 1, axis=0).at[0].set(motor_targets)
-        # state.info["motor_targets_history"] = _motor_targets_history
 
-        # data = mjx_env.step(self.mjx_model, state.data, delay_motor_targets, self.n_substeps)
         state.info["rng"], data = torque_step(
             state.info["rng"],
             self.mjx_model,
@@ -539,8 +495,6 @@ class G1CatPriEnv(G1LocoEnv):
         state.info["local_lin_vel"] = self.get_local_linvel(data, "pelvis")
         state.info["global_lin_vel"] = self.get_global_linvel(data, "pelvis")
         state.info["global_ang_vel"] = self.get_global_angvel(data, "pelvis")
-        # state.info["left_foot_force"] = mjx_env.get_sensor_data(self.mj_model, data, "left_foot_force")
-        # state.info["right_foot_force"] = mjx_env.get_sensor_data(self.mj_model, data, "right_foot_force")
 
         # navi frame
         pelvis2world_rot = data.site_xmat[self._pelvis_imu_site_id]
@@ -566,16 +520,8 @@ class G1CatPriEnv(G1LocoEnv):
         state.info["navi_torso_lin_vel"] = torso2navi_rot @ self.get_local_linvel(data, "torso")
         state.info["navi_torso_ang_vel"] = torso2navi_rot @ self.get_gyro(data, "torso")
 
-        state.info["rng"], cmd_rng = jax.random.split(state.info["rng"])
-
         state.info["last_command"] = state.info["command"].copy()
-        # state.info["command"] = jp.where(
-        #     state.info["step"] % self._cmd_resample_steps == 0,
-        #     self.sample_command(cmd_rng),
-        #     state.info["command"],
-        # )
         rtf = self.sample_field(self.gf, data.site_xpos[self._pelvis_imu_site_id].reshape(1, -1)).reshape(-1)
-        # command = self.compute_cmd_from_rtf(rtf)
         head_pos = data.site_xpos[self._head_site_id]
         head_vel = (head_pos - state.info["head_pos"]) / self.dt
         headgf = self.sample_field(self.gf, head_pos.reshape(1, -1))
@@ -599,7 +545,6 @@ class G1CatPriEnv(G1LocoEnv):
         shldsdf = self.sample_field(self.sdf, shlds_pos)
 
         command = self.compute_cmd_from_rtf(rtf, jp.concat([headgf,feetgf,handsgf], axis=0), jp.concat([headbf,feetbf,handsbf], axis=0))
-        # command = self.compute_cmd_from_rtf(rtf, jp.concat([feetgf], axis=0), jp.concat([feetbf], axis=0))
         state.info["rtf"] = rtf.copy()
         state.info["headgf"] = headgf.copy()
         state.info["headbf"] = headbf.copy()
@@ -632,7 +577,6 @@ class G1CatPriEnv(G1LocoEnv):
         # update history
         state.info["last_last_act"] = state.info["last_act"].copy()
         state.info["last_act"] = action.copy()
-        # state.info["feet_contact"] = feet_contact
         obs = self._get_obs(data, state.info, feet_contact)
         done = self._get_termination(data, state.info)
 
@@ -649,21 +593,9 @@ class G1CatPriEnv(G1LocoEnv):
         )
         # ransom
         state.info["rng"], episode_rng = jax.random.split(state.info["rng"])
-        _is_resample = jp.where(
-            done,
-            self.resample_domain_random_param(episode_rng, state),
-            False,
-        )
 
         for k, v in rewards.items():
             state.metrics[f"reward/{k}"] = v
-        # state.metrics["info/headk"] = jp.any(headdf < -self._config.term_collision_threshold).astype(reward.dtype)
-        # state.metrics["info/handsk"] = jp.any(handsdf < -self._config.term_collision_threshold).astype(reward.dtype)
-        # state.metrics["info/feetk"] = jp.any(feetdf < -self._config.term_collision_threshold).astype(reward.dtype)
-        #
-        # state.metrics["info/headdf"] = headdf.min()
-        # state.metrics["info/handsdf"] = handsdf.min()
-        # state.metrics["info/feetdf"] = feetdf.min()
 
         state.info["last_joint_vel"] = data.qvel[6:].copy()
         state.info["last_feet_vel"] = data.sensordata[self._foot_linvel_sensor_adr][..., 2]
@@ -690,11 +622,6 @@ class G1CatPriEnv(G1LocoEnv):
         phase = state.info["phase"] + state.info["phase_dt"]
         phase = jp.fmod(phase + jp.pi, 2 * jp.pi) - jp.pi
         phase = jp.where(after_stop, self._stance_phase, phase)
-        # phase = jp.where(
-        #     (last_task_mask == 0.0) & (task_mask == 1.0),
-        #     init_phase,
-        #     phase,
-        # ) 
         state.info["phase"] = phase
 
         # gait flag
@@ -725,10 +652,6 @@ class G1CatPriEnv(G1LocoEnv):
         contact_termination |= jp.any(info['feetdf'] < -self._config.term_collision_threshold)
         contact_termination |= jp.any(info['handsdf'] < -self._config.term_collision_threshold)
         contact_termination &= (info["step"] >= 100)
-        # jax.debug.print(info['headdf'])
-        # jax.debug.print(info['feetdf'])
-        # jax.debug.print(info['handsdf'])
-        # timeout = info["step"] >= self._config.episode_length
         return fall_termination | contact_termination | jp.isnan(data.qpos).any() | jp.isnan(data.qvel).any() | timeout
 
     def _get_obs(self, data: mjx.Data, info: dict[str, Any], feet_contact: jax.Array) -> mjx_env.Observation:
@@ -763,7 +686,6 @@ class G1CatPriEnv(G1LocoEnv):
 
         privileged_state = jp.hstack(
             [
-                # navi2world_pose,
                 # noiseless state
                 gyro_pelvis,  # 3
                 gvec_pelvis,  # 3
@@ -803,56 +725,10 @@ class G1CatPriEnv(G1LocoEnv):
                 info["kp_scale"],
                 info["kd_scale"],
                 info["rfi_lim_scale"],
-                # info["delay_steps"],
             ]
         )
-        # state = jp.hstack(
-        #     [
-        #         # navi2world_pose,
-        #         # noiseless state
-        #         gyro_pelvis,  # 3
-        #         gvec_pelvis,  # 3
-        #         (joint_angles - self._default_qpos)[self.obs_joint_ids],  # 23
-        #         joint_vel[self.obs_joint_ids],  # 23
-        #         info["last_act"],  # num_actions
-        #         info["motor_targets"][self.action_joint_ids],  # num_actions
-        #         command,  # 4
-        #         info["foot_height"],  # 1
-        #         gait_phase,  # (num_foot * 2)
-        #         # hint state
-        #         linvel_pelvis,  # 3
-        #         headgf.reshape(-1),
-        #         headbf.reshape(-1),
-        #         headdf.reshape(-1),
-        #         feetgf.reshape(-1),
-        #         feetbf.reshape(-1),
-        #         feetdf.reshape(-1),
-        #         handsgf.reshape(-1),
-        #         handsbf.reshape(-1),
-        #         handsdf.reshape(-1),
-        #         kneesbf.reshape(-1),
-        #         kneesdf.reshape(-1),
-        #         shldsbf.reshape(-1),
-        #         shldsdf.reshape(-1),
-        #         head_pos.reshape(-1),
-        #         head_vel.reshape(-1),
-        #         feet_pos.reshape(-1),
-        #         feet_vel.reshape(-1),
-        #         hands_pos.reshape(-1),
-        #         hands_vel.reshape(-1),
-        #         info["navi_torso_rpy"][:2],
-        #         info["gait_mask"],
-        #         feet_contact,  # num_foot
-        #         # domain randomization
-        #         # info["kp_scale"],
-        #         # info["kd_scale"],
-        #         # info["rfi_lim_scale"],
-        #         # info["delay_steps"],
-        #     ]
-        # )
         state = jp.hstack(
             [
-                # navi2world_pose,
                 # noiseless state
                 gyro_pelvis,  # 3
                 gvec_pelvis,  # 3
@@ -865,7 +741,6 @@ class G1CatPriEnv(G1LocoEnv):
                 gait_phase,  # (num_foot * 2)
                 # hint state
                 linvel_pelvis,  # 3
-                info["rtf"],
                 headgf.reshape(-1),
                 headbf.reshape(-1),
                 headdf.reshape(-1),
@@ -875,6 +750,10 @@ class G1CatPriEnv(G1LocoEnv):
                 handsgf.reshape(-1),
                 handsbf.reshape(-1),
                 handsdf.reshape(-1),
+                kneesbf.reshape(-1),
+                kneesdf.reshape(-1),
+                shldsbf.reshape(-1),
+                shldsdf.reshape(-1),
                 head_pos.reshape(-1),
                 head_vel.reshape(-1),
                 feet_pos.reshape(-1),
@@ -908,18 +787,13 @@ class G1CatPriEnv(G1LocoEnv):
     ) -> dict[str, jax.Array]:
         move_flag = info["command"][0]
         cmd_vel = info["command"][1:].copy()  # [x, y, yaw]
-        current_goal_global = jp.array([2.0, 0.0, 0.7])
-        ideal_yaw = jp.pi / 2
-        world_rpy = jp.array(jaxlie.SO3.from_matrix(info["navi2world_rot"]).as_rpy_radians())
-        # cmd_vel=cmd_vel.at[2].set((ideal_yaw-world_rpy[2])/5.)
-        # head_global_lin_vel = self.get_global_linvel(data, "head")
 
         reward_dict = {
             # behavior reward
             "tracking_orientation": self._reward_orientation(
                 info["navi_pelvis_rpy"], info["navi_torso_rpy"], info["head_pos"][2] > (self._config.torso_height[1] + 0.1)
             ),
-            "tracking_lin_vel": self._reward_tracking_lin_vel(cmd_vel, info["global_lin_vel"]),
+            "tracking_root_field": self._reward_tracking_root_field(cmd_vel, info["global_lin_vel"]),
             "body_motion": self._cost_body_motion(info["global_lin_vel"], info["navi_torso_ang_vel"], cmd_vel), # TODO
             "body_rotation": self._reward_body_rotation(data, cmd_vel, info["navi2world_rot"]),
             "feet_rotation": self._reward_feet_rotation(data, info["navi2world_rot"]),
@@ -939,13 +813,10 @@ class G1CatPriEnv(G1LocoEnv):
             "handsgf": self._re_gf0(info["handsgf"], info["hands_vel"], info["handsdf"], move_flag[None]<0.5, tau=0.5),
             "headdf": self._re_sdf(info["headdf"]),
             "feetdf": self._re_sdf(info["feetdf"]),
-            "handsdf": self._re_sdf(info["handsdf"],), # NOTE
+            "handsdf": self._re_sdf(info["handsdf"],), 
             "kneesdf": self._re_sdf(info["kneesdf"]),
             "shldsdf": self._re_sdf(info["shldsdf"]),
         }
-        # for k, v in reward_dict.items():
-        #     if jp.any(jp.isnan(v)):
-        #         raise ValueError(f"reward_dict['{k}'] contains NaN!")
         for k, v in reward_dict.items():
             # replace NaN with 0
             reward_dict[k] = jp.where(jp.isnan(v), 0.0, v)
@@ -1042,7 +913,6 @@ class G1CatPriEnv(G1LocoEnv):
     def _reward_orientation(
         self, pelvis_rpy: jax.Array, torso_rpy: jax.Array, idle_mask: jax.Array
     ) -> jax.Array:
-        # idle_mask = jp.isclose(task_mask, 0.0)
         err_roll = jp.abs(pelvis_rpy[0]) + jp.abs(torso_rpy[0])
         err_pitch_dire = jp.abs(jp.clip(torso_rpy[1], -np.pi, 0.0))
         err_pitch_idle = idle_mask * jp.abs(torso_rpy[1])
@@ -1054,7 +924,6 @@ class G1CatPriEnv(G1LocoEnv):
         self, cmd_vel: jax.Array, local_lin_vel: jax.Array, world_rpy: jax.Array, ideal_yaw: jax.Array
     ) -> jax.Array:
         lin_vel_error = jp.sum(jp.square(cmd_vel[:2] - local_lin_vel[:2]))
-        # idle_mask = jp.isclose(task_mask, 0.0)
         err_yaw = jp.abs(world_rpy[2] - ideal_yaw)
         rew = jp.exp(-0.5 * err_yaw) * (0.0 + 1.0 * jp.exp(-4.0 * lin_vel_error))
         return rew
@@ -1070,8 +939,6 @@ class G1CatPriEnv(G1LocoEnv):
         return foot_spread_penalty
 
     def _cost_straight_knee(self, knee_pos) -> jax.Array:
-        # knee_pos = data.qpos[jnp.array(self._knee_indices) + 7]  # shape [2]
-        # 只惩罚负数
         penalty = jp.clip(0.1 - knee_pos, min = 0.0) # NOTE
         cost = jp.sum(penalty)
         return cost
@@ -1094,7 +961,6 @@ class G1CatPriEnv(G1LocoEnv):
 
         foot2com_err = sup2navi_pos[1:] - sup2navi_pos[0]
         foot_center = foot2com_err[0, :2] + foot2com_err[1, :2]  # ignore z-axis
-        # foot_center = foot_center.at[0].set(foot_center[0] + 0.05)
         cost_support = jp.sum(jp.square(foot_center))
         cost_support *= stance_mask
         return cost_support
@@ -1112,8 +978,6 @@ class G1CatPriEnv(G1LocoEnv):
         legs2world_rot = jp.concat([data.xmat[self.body_ids_left_leg], data.xmat[self.body_ids_right_leg]])
         legs2navi_rot = navi2world_rot.T[None] @ legs2world_rot  # (N, 3, 3)
         axis_roll_err = jp.mean(jp.abs(legs2navi_rot[:, 2, 1]))
-        # axis_yaw_err = jp.mean(cmd_decay * jp.abs(legs2navi_rot[:, 0, 1]))
-        # axis_rew = jp.exp(-5.0 * (axis_roll_err + axis_yaw_err))
         axis_rew = jp.exp(-5.0 * axis_roll_err)
         return axis_rew
 
@@ -1124,22 +988,13 @@ class G1CatPriEnv(G1LocoEnv):
         return idx
 
     def sample_field(self, field, pos):
-        """
-        三线性插值 (完全向量化，无 if/for)
-        field: (Nx, Ny, Nz, C)
-        pos:   (N, 3)  世界坐标
-        return: (N, C)
-        """
-        # ---- 连续索引 (N,3) ----
         idx = self.world_to_grid(pos)                  # (N,3)
         x, y, z = idx[:, 0], idx[:, 1], idx[:, 2]     # (N,)
 
-        # ---- 边界裁剪到 [0, N-2]，保证八邻域可访问 ----
         x = jp.clip(x, 0, self.Nx - 2)
         y = jp.clip(y, 0, self.Ny - 2)
         z = jp.clip(z, 0, self.Nz - 2)
 
-        # ---- 下取整与小数部分 ----
         xi = jp.floor(x).astype(jp.int32)             # (N,)
         yi = jp.floor(y).astype(jp.int32)
         zi = jp.floor(z).astype(jp.int32)
@@ -1147,7 +1002,6 @@ class G1CatPriEnv(G1LocoEnv):
         yd = y - yi
         zd = z - zi
 
-        # ---- 8 个 corner 的整数索引：广播构造 (N,8,3) ----
         offsets = jp.array([
             [0,0,0],[1,0,0],[0,1,0],[1,1,0],
             [0,0,1],[1,0,1],[0,1,1],[1,1,1]
@@ -1156,10 +1010,8 @@ class G1CatPriEnv(G1LocoEnv):
         base = jp.stack([xi, yi, zi], axis=1)         # (N,3)
         corners = base[:, None, :] + offsets[None, :, :]     # (N,8,3)
 
-        # ---- 按 8 个 corner 一次性 gather：得到 (N,8,C) ----
         vals = field[corners[..., 0], corners[..., 1], corners[..., 2], :]  # (N,8,C)
 
-        # ---- 8 个权重：外积后 reshape 为 (N,8) ----
         wx = jp.stack([1.0 - xd, xd], axis=1)         # (N,2)
         wy = jp.stack([1.0 - yd, yd], axis=1)         # (N,2)
         wz = jp.stack([1.0 - zd, zd], axis=1)         # (N,2)
@@ -1168,51 +1020,32 @@ class G1CatPriEnv(G1LocoEnv):
             wy[:, None, :, None] *
             wz[:, None, None, :]).reshape(-1, 8)      # (N,8)
 
-        # ---- 加权求和：沿 8 个角点聚合到 (N,C) ----
         out = jp.einsum('ne,nec->nc', w, vals)        # (N,C)
         return out
-    
-    # def compute_cmd_from_rtf(self, rtf):
-    #     # rtf: (3,) (x,y,z)
-    #     command = jp.hstack([1.0, rtf[0], rtf[1], 0.0])
-    #     small_cond = jp.linalg.norm(command[1:4]) < 0.2
-    #     command = jp.where(small_cond, self._stop_cmd, command)
-    #     return command
 
     def compute_cmd_from_rtf(self, rtf, cgf, cbf):
-        # rtf: (3,) 原始速度 (x,y,z)
-        # cgf: (M,3) chest query guidance field
-        # cbf: (M,3) chest query barrier directions
+        # reuse command in velocity-control locomotion for our HumanoidPF, can be seen as a single iteration of field projection
 
-        v = rtf[:2] * 0.6  # 只取 xy 分量
+        v = rtf[:2] * 0.6 
 
-        # 单位化 bf，避免除0
         bnorm = jp.linalg.norm(cbf[:, :2], axis=-1, keepdims=True) + 1e-9
         b_hat = cbf[:, :2] / bnorm  # (M,2)
 
-        # 下界 L = b^T cgf
         Ls = jp.sum(b_hat * cgf[:, :2], axis=-1)  # (M,)
 
-        # 当前 b^T v
         bv = jp.sum(b_hat * v, axis=-1)           # (M,)
 
-        # 投影修正量 Δv_i = ((L - b^T v)/||b||^2) b
         diff = (Ls - bv)[:, None] / (jp.sum(b_hat * b_hat, axis=-1, keepdims=True) + 1e-9)
         delta = diff * b_hat  # (M,2)
 
-        # 只在 L > b^T v 时生效
         mask = (Ls > bv)[:, None]  # (M,1)
         delta = jp.where(mask, delta, 0.0)
 
-        # 一次 sweep: 把所有修正量加起来
         v_new = v + jp.mean(delta, axis=0)
 
-        # 拼接成 command
         command = jp.hstack([1.0, v_new[0], v_new[1], 0.0])
 
-        # 小速度停止
         small_cond = jp.linalg.norm(command[1:4]) < 0.2
-        # command = command.at[1:4].set(jp.clip(command[1:4], -0.4, 0.4))
         command = jp.where(small_cond, self._stop_cmd, command)
         return command
     

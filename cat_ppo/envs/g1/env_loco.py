@@ -31,7 +31,7 @@ import cat_ppo
 from cat_ppo.envs.g1 import base as g1_base
 from cat_ppo.envs.g1 import constants as consts
 
-ENABLE_RANDOMIZE = True
+ENABLE_RANDOMIZE = False
 
 
 def g1_loco_task_config() -> config_dict.ConfigDict:
@@ -243,13 +243,6 @@ def torque_step(
         return (rng, data), None
 
     return jax.lax.scan(single_step, (rng, data), (), n_substeps)[0]
-
-
-# command define
-# [0]: move_flag (0: stop, 1: move)
-# [1]: x linear velocity
-# [2]: y linear velocity
-# [3]: yaw angular velocity
 
 
 @cat_ppo.registry.register("G1Loco", "train_env_class")
@@ -753,10 +746,8 @@ class G1LocoEnv(g1_base.G1Env):
         )
 
         gait_phase = jp.concatenate([jp.cos(info["phase"]), jp.sin(info["phase"])])
-        # navi2world_pose = info["navi2world_pose"].reshape(-1)
         state = jp.hstack(
             [
-                # navi2world_pose,
                 # pose state
                 noisy_gyro_pelvis,  # 3
                 noisy_gvec_pelvis,  # 3
@@ -771,20 +762,8 @@ class G1LocoEnv(g1_base.G1Env):
                 gait_phase,  # (num_foot * 2)
             ]
         )
-        # _obs_history = jp.roll(info["obs_history"], 1, axis=0).at[0].set(state)
-        # info["obs_history"] = _obs_history
-
-        # l_contact_force = jp.linalg.norm(info["left_foot_force"], axis=-1)
-        # r_contact_force = jp.linalg.norm(info["right_foot_force"], axis=-1)
-        # foot_contact_force = jp.array([l_contact_force, r_contact_force])
-
-        # legs2world_rot = jp.concat([data.xmat[self.body_ids_left_leg], data.xmat[self.body_ids_right_leg]])
-        # legs2navi_rot = info["navi2world_rot"].T[None] @ legs2world_rot  # (N, 3, 3)
-        # foot_height = data.site_xpos[self._feet_site_id][..., -1]
-
         privileged_state = jp.hstack(
             [
-                # navi2world_pose,
                 # noiseless state
                 gyro_pelvis,  # 3
                 gvec_pelvis,  # 3
@@ -804,7 +783,6 @@ class G1LocoEnv(g1_base.G1Env):
                 info["kp_scale"],
                 info["kd_scale"],
                 info["rfi_lim_scale"],
-                # info["delay_steps"],
             ]
         )
 
@@ -845,9 +823,6 @@ class G1LocoEnv(g1_base.G1Env):
             "smoothness_joint": self._cost_smoothness_joint(data, info["last_joint_vel"]),
             "smoothness_action": self._cost_smoothness_action(action, info["last_act"], info["last_last_act"]),
         }
-        # for k, v in reward_dict.items():
-        #     if jp.any(jp.isnan(v)):
-        #         raise ValueError(f"reward_dict['{k}'] contains NaN!")
         for k, v in reward_dict.items():
             # replace NaN with 0
             reward_dict[k] = jp.where(jp.isnan(v), 0.0, v)
@@ -894,10 +869,6 @@ class G1LocoEnv(g1_base.G1Env):
         err_ori = err_roll + err_pitch
         rew = jp.exp(-err_ori)
         return rew
-
-    # def _cost_base_height(self, root_height):
-    #     base_height_error = jp.square(root_height - self._config.reward_config.base_height_target)
-    #     return base_height_error
 
     def _reward_base_height(self, root_height, move_flag):
         base_height_error = jp.abs(root_height - self._config.reward_config.base_height_target)
@@ -1040,28 +1011,10 @@ class G1LocoEnv(g1_base.G1Env):
         rfi_lim_scale = self._config.dm_rand_config.rfi_lim * rfi_lim_noise_scale * self.torque_limit
         rfi_lim_scale = jp.where(self._config.dm_rand_config.enable_rfi, rfi_lim_scale, jp.zeros_like(rfi_lim_scale))
 
-        # control delay
-        # delay_steps = jax.random.randint(
-        #     key_delay,
-        #     shape=(),
-        #     minval=self._config.dm_rand_config.ctrl_delay_range[0],
-        #     maxval=self._config.dm_rand_config.ctrl_delay_range[1] + 1,
-        # )
-        # delay_steps = jp.where(
-        #     self._config.dm_rand_config.enable_ctrl_delay, delay_steps, jp.zeros_like(delay_steps, dtype=jp.int32)
-        # )
 
         state.info["kp_scale"] = kp_scale
         state.info["kd_scale"] = kd_scale
         state.info["rfi_lim_scale"] = rfi_lim_scale
-        # state.info["delay_steps"] = delay_steps
-
-        # # apply KPs KDs for position
-        # self._mjx_model.replace(
-        #     dof_damping=self._mjx_model.dof_damping.at[6:].set(state.info["kd_scale"] * self._kds),
-        #     actuator_gainprm=self._mjx_model.actuator_gainprm.at[:, 0].set(state.info["kp_scale"] * self._kps),
-        #     actuator_biasprm=self._mjx_model.actuator_biasprm.at[:, 1].set(state.info["kp_scale"] * -self._kps),
-        # )
 
         return True
 

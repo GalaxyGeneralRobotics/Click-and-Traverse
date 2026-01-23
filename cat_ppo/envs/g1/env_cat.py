@@ -79,13 +79,13 @@ def g1_loco_task_config() -> config_dict.ConfigDict:
             scales=config_dict.create(
                 # behavior reward
                 tracking_orientation=2.0,
-                tracking_lin_vel=1.0,
+                tracking_root_field=1.0,
                 body_motion=-0.5,
                 body_rotation=1.0,
                 foot_contact=-1.0,
                 foot_clearance=-15.0,
                 foot_slip=-0.5,
-                foot_balance=-30, # NOTE
+                foot_balance=-30, 
                 foot_far = -0,
                 straight_knee = -30,
                 # energy reward
@@ -113,7 +113,7 @@ def g1_loco_task_config() -> config_dict.ConfigDict:
             magnitude_range=[0.1, 1.0],
         ),
         command_config=config_dict.create(
-            resampling_time=10.0,  # command changed time [s]
+            resampling_time=10.0, 
             stop_prob=0.2,
         ),
         lin_vel_x=[-0.5, 0.5],
@@ -177,7 +177,7 @@ def g1_loco_task_config() -> config_dict.ConfigDict:
         save_checkpoint_path=None,
         restore_checkpoint_path=None,
         restore_params=None,
-        restore_value_fn=False, # NOTE
+        restore_value_fn=False,
     )
 
     # vel: move_flag[0|1], x[m], y[m], yaw[rad]
@@ -201,16 +201,6 @@ cat_ppo.registry.register("G1Cat", "config")(g1_loco_task_config())
 
 @jax.jit
 def world_to_navi_pos(navi2world_pose: jp.ndarray, pos: jp.ndarray) -> jp.ndarray:
-    """
-    将位置从 world 坐标系转换到 navi 坐标系 (JAX)
-
-    Args:
-        navi2world_pose: (4,4) navi->world 齐次矩阵
-        pos: (N,3) 位置向量
-
-    Returns:
-        (N,3) navi 坐标系下的位置
-    """
     world2navi = jp.linalg.inv(navi2world_pose)
     R = world2navi[:3, :3]
     t = world2navi[:3, 3]
@@ -218,16 +208,6 @@ def world_to_navi_pos(navi2world_pose: jp.ndarray, pos: jp.ndarray) -> jp.ndarra
 
 @jax.jit
 def world_to_navi_vel(navi2world_pose: jp.ndarray, vel: jp.ndarray) -> jp.ndarray:
-    """
-    将速度从 world 坐标系转换到 navi 坐标系 (JAX)
-
-    Args:
-        navi2world_pose: (4,4) navi->world 齐次矩阵
-        vel: (N,3) 速度向量
-
-    Returns:
-        (N,3) navi 坐标系下的速度
-    """
     world2navi = jp.linalg.inv(navi2world_pose)
     R = world2navi[:3, :3]
     return (R @ vel.T).T
@@ -268,21 +248,16 @@ def normalize(q):
 
 @jax.jit
 def delay_rootpose_noisy(key, qpos_root):
-    # 1. 生成 ±2cm 平移噪声
     dxyz = (jax.random.uniform(key, (3,)) * 2 - 1) * 0.05  # (3,)
 
-    # 2. 生成 ±2° 方向的绕Z旋转噪声
     q_gt = qpos_root[3:7]  # (4,) wxyz
-    angle = (jax.random.uniform(key, ()) * 2 - 1) * jp.deg2rad(10.0)  # 标量
+    angle = (jax.random.uniform(key, ()) * 2 - 1) * jp.deg2rad(10.0)  
     half = angle / 2.0
 
-    # 3. 构造绕 Z 轴的四元数扰动
-    q_dr = jp.stack([jp.cos(half), 0.0, 0.0, jp.sin(half)])  # (4,) 绕Z rot, wxyz
+    q_dr = jp.stack([jp.cos(half), 0.0, 0.0, jp.sin(half)])  
 
-    # 4. 旋转叠加并归一化
     q_new = normalize(quat_mul(q_dr, q_gt))
 
-    # 5. 组合新的 root 位姿 (xyz + quat)
     return jp.concatenate([qpos_root[:3] + dxyz, q_new], axis=0)  # (7,)
 
 @jax.jit
@@ -335,12 +310,6 @@ def torque_step(
     return jax.lax.scan(single_step, (rng, data), (), n_substeps)[0]
 
 
-# command define
-# [0]: move_flag (0: stop, 1: move)
-# [1]: x linear velocity
-# [2]: y linear velocity
-# [3]: yaw angular velocity
-
 
 @cat_ppo.registry.register("G1Cat", "train_env_class")
 class G1CatEnv(G1LocoEnv):
@@ -359,7 +328,7 @@ class G1CatEnv(G1LocoEnv):
         )
         pf_path = config.pf_config.path
         self.dx = config.pf_config.dx
-        self.sdf = jp.array(np.load(f"{pf_path}/sdf.npy"))[...,None] # NOTE   # (Nx,Ny,Nz)
+        self.sdf = jp.array(np.load(f"{pf_path}/sdf.npy"))[...,None]  # (Nx,Ny,Nz)
         self.bf  = jp.array(np.load(f"{pf_path}/bf.npy"))    # (Nx,Ny,Nz,3)
         self.gf  = jp.array(np.load(f"{pf_path}/gf.npy"))    # (Nx,Ny,Nz,3)
         self.pf_origin = jp.array(np.array(config.pf_config.origin, dtype=np.float32), dtype=jp.float32)
@@ -493,19 +462,15 @@ class G1CatEnv(G1LocoEnv):
             "last_last_act": jp.zeros(self.action_size),
             "last_feet_vel": jp.zeros(2),
             "last_joint_vel": np.zeros(self.num_joints),
-            # "obs_history": jp.zeros((self._config.history_len, self._config.num_obs)),
             # push
             "push": jp.array([0.0, 0.0]),
             "push_step": 0,
             "push_interval_steps": push_interval_steps,
             # state
             "motor_targets": self._default_qpos.copy(),
-            # "motor_targets_history": motor_targets_history,
             "local_lin_vel": jp.zeros(3),
             "global_lin_vel": jp.zeros(3),
             "global_ang_vel": jp.zeros(3),
-            # "left_foot_force": jp.zeros(3),
-            # "right_foot_force": jp.zeros(3),
             "navi2world_rot": jp.eye(3),
             "navi2world_pose": jp.eye(4),
             "navi_torso_rpy": jp.zeros(3),
@@ -582,17 +547,10 @@ class G1CatEnv(G1LocoEnv):
             "shldsbf_delay": shldsbf.copy(),
             "shldsdf_delay": shldsdf.copy(),
         }
-        # update gait state
 
         metrics = {}
         for k in self._config.reward_config.scales.keys():
             metrics[f"reward/{k}"] = jp.zeros(())
-        # metrics["info/headdf"] = headdf.min()
-        # metrics["info/handsdf"] = handsdf.min()
-        # metrics["info/feetdf"] = feetdf.min()
-        # metrics["info/headk"] = jp.zeros(())
-        # metrics["info/handsk"] = jp.zeros(())
-        # metrics["info/feetk"] = jp.zeros(())
 
         contact = jp.array([geoms_colliding(data, geom_id, self._floor_geom_id) for geom_id in self._feet_geom_id])
         obs = self._get_obs(data, info, contact)
@@ -618,8 +576,6 @@ class G1CatEnv(G1LocoEnv):
         state = state.replace(data=data)
 
         # set motor target
-        # lower_motor_targets = self._default_qpos[self.action_joint_ids] + action * self._config.action_scale
-        # Action Space 1: delta position from last motor targets
         lower_motor_targets = jp.clip(
             state.info["motor_targets"][self.action_joint_ids]
             + action * self._config.action_scale,
@@ -628,10 +584,6 @@ class G1CatEnv(G1LocoEnv):
         )
         motor_targets = self._default_qpos.copy()
         motor_targets = motor_targets.at[self.action_joint_ids].set(lower_motor_targets)
-        # _motor_targets_history = jp.roll(state.info["motor_targets_history"], 1, axis=0).at[0].set(motor_targets)
-        # state.info["motor_targets_history"] = _motor_targets_history
-
-        # data = mjx_env.step(self.mjx_model, state.data, delay_motor_targets, self.n_substeps)
         state.info["rng"], data = torque_step(
             state.info["rng"],
             self.mjx_model,
@@ -652,8 +604,6 @@ class G1CatEnv(G1LocoEnv):
         state.info["local_lin_vel"] = self.get_local_linvel(data, "pelvis")
         state.info["global_lin_vel"] = self.get_global_linvel(data, "pelvis")
         state.info["global_ang_vel"] = self.get_global_angvel(data, "pelvis")
-        # state.info["left_foot_force"] = mjx_env.get_sensor_data(self.mj_model, data, "left_foot_force")
-        # state.info["right_foot_force"] = mjx_env.get_sensor_data(self.mj_model, data, "right_foot_force")
 
         # navi frame
         pelvis2world_rot = data.site_xmat[self._pelvis_imu_site_id]
@@ -682,11 +632,6 @@ class G1CatEnv(G1LocoEnv):
         state.info["rng"], cmd_rng = jax.random.split(state.info["rng"])
 
         state.info["last_command"] = state.info["command"].copy()
-        # state.info["command"] = jp.where(
-        #     state.info["step"] % self._cmd_resample_steps == 0,
-        #     self.sample_command(cmd_rng),
-        #     state.info["command"],
-        # )
         head_pos = data.site_xpos[self._head_site_id]
         head_vel = (head_pos - state.info["head_pos"]) / self.dt
         pelv_pos = data.site_xpos[self._pelvis_imu_site_id]
@@ -720,8 +665,8 @@ class G1CatEnv(G1LocoEnv):
         update_pf = (state.info["step"] % 5) == 0
         state.info["rng"], odo_key = jax.random.split(state.info["rng"], 2)
         odo_noisy = delay_rootpose_noisy(odo_key, data.qpos[:7])
-        odom_delay = jp.where(update_pf, odo_noisy, state.info["odom_delay"]) # NOTE
-        # odom_delay = jp.where(update_pf, data.qpos[:7], state.info["odom_delay"])
+        # odom_delay = jp.where(update_pf, odo_noisy, state.info["odom_delay"]) 
+        odom_delay = jp.where(update_pf, data.qpos[:7], state.info["odom_delay"])
         p_gt = data.qpos[:3]
         q_gt = data.qpos[3:7]
         p_odom = odom_delay[:3]
@@ -813,7 +758,6 @@ class G1CatEnv(G1LocoEnv):
         # update history
         state.info["last_last_act"] = state.info["last_act"].copy()
         state.info["last_act"] = action.copy()
-        # state.info["feet_contact"] = feet_contact
         obs = self._get_obs(data, state.info, feet_contact)
         done = self._get_termination(data, state.info)
 
@@ -838,13 +782,6 @@ class G1CatEnv(G1LocoEnv):
 
         for k, v in rewards.items():
             state.metrics[f"reward/{k}"] = v
-        # state.metrics["info/headk"] = jp.any(headdf < -self._config.term_collision_threshold).astype(reward.dtype)
-        # state.metrics["info/handsk"] = jp.any(handsdf < -self._config.term_collision_threshold).astype(reward.dtype)
-        # state.metrics["info/feetk"] = jp.any(feetdf < -self._config.term_collision_threshold).astype(reward.dtype)
-        #
-        # state.metrics["info/headdf"] = headdf.min()
-        # state.metrics["info/handsdf"] = handsdf.min()
-        # state.metrics["info/feetdf"] = feetdf.min()
 
         state.info["last_joint_vel"] = data.qvel[6:].copy()
         state.info["last_feet_vel"] = data.sensordata[self._foot_linvel_sensor_adr][..., 2]
@@ -871,11 +808,6 @@ class G1CatEnv(G1LocoEnv):
         phase = state.info["phase"] + state.info["phase_dt"]
         phase = jp.fmod(phase + jp.pi, 2 * jp.pi) - jp.pi
         phase = jp.where(after_stop, self._stance_phase, phase)
-        # phase = jp.where(
-        #     (last_task_mask == 0.0) & (task_mask == 1.0),
-        #     init_phase,
-        #     phase,
-        # ) 
         state.info["phase"] = phase
 
         # gait flag
@@ -910,7 +842,6 @@ class G1CatEnv(G1LocoEnv):
         contact_termination |= jp.any(info['kneesdf'] < -self._config.term_collision_threshold)
         contact_termination |= jp.any(info['shldsdf'] < -self._config.term_collision_threshold)
         contact_termination &= (info["step"] >= 50)
-        # timeout = info["step"] >= self._config.episode_length
         return fall_termination | contact_termination | jp.isnan(data.qpos).any() | jp.isnan(data.qvel).any()# | timeout
 
     def _get_obs(self, data: mjx.Data, info: dict[str, Any], feet_contact: jax.Array) -> mjx_env.Observation:
@@ -981,7 +912,6 @@ class G1CatEnv(G1LocoEnv):
 
         privileged_state = jp.hstack(
             [
-                # navi2world_pose,
                 # noiseless state
                 gyro_pelvis,  # 3
                 gvec_pelvis,  # 3
@@ -1138,9 +1068,7 @@ class G1CatEnv(G1LocoEnv):
                 command,  # 4
                 info["foot_height"],  # 1
                 gait_phase,  # (num_foot * 2)
-                # hint state
                 pf,
-                # info["gait_mask"],
             ]
         )
 
@@ -1160,19 +1088,14 @@ class G1CatEnv(G1LocoEnv):
     ) -> dict[str, jax.Array]:
         move_flag = info["command"][0]
         cmd_vel = info["command"][1:].copy()  # [x, y, yaw]
-        current_goal_global = jp.array([2.0, 0.0, 0.7])
-        ideal_yaw = jp.pi / 2
-        world_rpy = jp.array(jaxlie.SO3.from_matrix(info["navi2world_rot"]).as_rpy_radians())
-        # cmd_vel=cmd_vel.at[2].set((ideal_yaw-world_rpy[2])/5.)
-        # head_global_lin_vel = self.get_global_linvel(data, "head")
 
         reward_dict = {
             # behavior reward
             "tracking_orientation": self._reward_orientation(
                 info["navi_pelvis_rpy"], info["navi_torso_rpy"], info["head_pos"][2] > (self._config.torso_height[1] + 0.1)
             ),
-            "tracking_lin_vel": self._reward_tracking_lin_vel(cmd_vel, info["global_lin_vel"]),
-            "body_motion": self._cost_body_motion(info["global_lin_vel"], info["navi_torso_ang_vel"], cmd_vel), # TODO
+            "tracking_root_field": self._reward_tracking_root_field(cmd_vel, info["global_lin_vel"]),
+            "body_motion": self._cost_body_motion(info["global_lin_vel"], info["navi_torso_ang_vel"], cmd_vel),
             "body_rotation": self._reward_body_rotation(data, cmd_vel, info["navi2world_rot"]),
             "foot_contact": self._cost_foot_contact(data, feet_contact, info["gait_mask"], move_flag),
             "foot_clearance": self._cost_foot_clearance(data, info["foot_height"], info["gait_mask"], move_flag),
@@ -1196,9 +1119,6 @@ class G1CatEnv(G1LocoEnv):
             "shldsdf": self._re_sdf(info["shldsdf"]),
 
         }
-        # for k, v in reward_dict.items():
-        #     if jp.any(jp.isnan(v)):
-        #         raise ValueError(f"reward_dict['{k}'] contains NaN!")
         for k, v in reward_dict.items():
             # replace NaN with 0
             reward_dict[k] = jp.where(jp.isnan(v), 0.0, v)
@@ -1258,21 +1178,11 @@ class G1CatEnv(G1LocoEnv):
     def _reward_orientation(
         self, pelvis_rpy: jax.Array, torso_rpy: jax.Array, idle_mask: jax.Array
     ) -> jax.Array:
-        # idle_mask = jp.isclose(task_mask, 0.0)
         err_roll = jp.abs(pelvis_rpy[0]) + jp.abs(torso_rpy[0])
         err_pitch_dire = jp.abs(jp.clip(torso_rpy[1], -np.pi, 0.0))
         err_pitch_idle = idle_mask * jp.abs(torso_rpy[1])
         err_ori = err_roll + err_pitch_dire + err_pitch_idle
         rew = jp.exp(-0.5 * err_ori) - err_pitch_dire
-        return rew
-    
-    def _reward_facing(
-        self, cmd_vel: jax.Array, local_lin_vel: jax.Array, world_rpy: jax.Array, ideal_yaw: jax.Array
-    ) -> jax.Array:
-        lin_vel_error = jp.sum(jp.square(cmd_vel[:2] - local_lin_vel[:2]))
-        # idle_mask = jp.isclose(task_mask, 0.0)
-        err_yaw = jp.abs(world_rpy[2] - ideal_yaw)
-        rew = jp.exp(-0.5 * err_yaw) * (0.0 + 1.0 * jp.exp(-4.0 * lin_vel_error))
         return rew
     
     def _cost_foot_far(self, data: mjx.Data) -> jax.Array:
@@ -1286,8 +1196,6 @@ class G1CatEnv(G1LocoEnv):
         return foot_spread_penalty
 
     def _cost_straight_knee(self, knee_pos) -> jax.Array:
-        # knee_pos = data.qpos[jnp.array(self._knee_indices) + 7]  # shape [2]
-        # 只惩罚负数
         penalty = jp.clip(0.1 - knee_pos, min = 0.0)
         cost = jp.sum(penalty)
         return cost
@@ -1341,46 +1249,21 @@ class G1CatEnv(G1LocoEnv):
         axis_rew = jp.exp(-5.0 * (axis_roll_err + axis_yaw_err))
         # axis_rew = jp.exp(-5.0 * axis_roll_err)
         return axis_rew
-
-    def _reward_default_qpos(self, qpos, move_flag):
-        error_qpos = (qpos - self._default_qpos)[self.obs_joint_ids]
-        rew = jp.exp(-2.0 * jp.sum(jp.square(error_qpos))) * (1 - move_flag)
-        return rew
-
-    def _cost_hip_pitch(self, hip_pitch, root_x) -> jax.Array:
-        # knee_pos = data.qpos[jnp.array(self._knee_indices) + 7]  # shape [2]
-        # hip_pitch - -0.1 - 0.5 = -0.6
-        penalty_0 = jp.clip(hip_pitch + 0.6, min = 0.0)
-        cost_0 = jp.sum(penalty_0) * (root_x<1.5) * (root_x>1.0)
-
-        penalty_1 = jp.abs(hip_pitch + 0.1)
-        cost_1 = jp.sum(penalty_1) * ((root_x<0.5) + (root_x>2.0))
-        return cost_0 + cost_1
         
 
     def world_to_grid(self, pos):
-        """ 世界坐标 -> voxel index (浮点) """
         rel = pos - self.pf_origin
         idx = rel / self.dx
         return idx
 
     def sample_field(self, field, pos):
-        """
-        三线性插值 (完全向量化，无 if/for)
-        field: (Nx, Ny, Nz, C)
-        pos:   (N, 3)  世界坐标
-        return: (N, C)
-        """
-        # ---- 连续索引 (N,3) ----
         idx = self.world_to_grid(pos)                  # (N,3)
         x, y, z = idx[:, 0], idx[:, 1], idx[:, 2]     # (N,)
 
-        # ---- 边界裁剪到 [0, N-2]，保证八邻域可访问 ----
         x = jp.clip(x, 0, self.Nx - 2)
         y = jp.clip(y, 0, self.Ny - 2)
         z = jp.clip(z, 0, self.Nz - 2)
 
-        # ---- 下取整与小数部分 ----
         xi = jp.floor(x).astype(jp.int32)             # (N,)
         yi = jp.floor(y).astype(jp.int32)
         zi = jp.floor(z).astype(jp.int32)
@@ -1388,7 +1271,6 @@ class G1CatEnv(G1LocoEnv):
         yd = y - yi
         zd = z - zi
 
-        # ---- 8 个 corner 的整数索引：广播构造 (N,8,3) ----
         offsets = jp.array([
             [0,0,0],[1,0,0],[0,1,0],[1,1,0],
             [0,0,1],[1,0,1],[0,1,1],[1,1,1]
@@ -1397,10 +1279,8 @@ class G1CatEnv(G1LocoEnv):
         base = jp.stack([xi, yi, zi], axis=1)         # (N,3)
         corners = base[:, None, :] + offsets[None, :, :]     # (N,8,3)
 
-        # ---- 按 8 个 corner 一次性 gather：得到 (N,8,C) ----
         vals = field[corners[..., 0], corners[..., 1], corners[..., 2], :]  # (N,8,C)
 
-        # ---- 8 个权重：外积后 reshape 为 (N,8) ----
         wx = jp.stack([1.0 - xd, xd], axis=1)         # (N,2)
         wy = jp.stack([1.0 - yd, yd], axis=1)         # (N,2)
         wz = jp.stack([1.0 - zd, zd], axis=1)         # (N,2)
@@ -1409,44 +1289,31 @@ class G1CatEnv(G1LocoEnv):
             wy[:, None, :, None] *
             wz[:, None, None, :]).reshape(-1, 8)      # (N,8)
 
-        # ---- 加权求和：沿 8 个角点聚合到 (N,C) ----
         out = jp.einsum('ne,nec->nc', w, vals)        # (N,C)
         return out
 
     def compute_cmd_from_rtf(self, rtf, cgf, cbf):
-        # rtf: (3,) 原始速度 (x,y,z)
-        # cgf: (M,3) chest query guidance field
-        # cbf: (M,3) chest query barrier directions
+        # reuse command in velocity control for our HumanoidPF, can be seen as a single iteration of field projection
+        v = rtf[:2] * 0.7 
 
-        v = rtf[:2] * 0.7  # 只取 xy 分量
-
-        # 单位化 bf，避免除0
         bnorm = jp.linalg.norm(cbf[:, :2], axis=-1, keepdims=True) + 1e-9
         b_hat = cbf[:, :2] / bnorm  # (M,2)
 
-        # 下界 L = b^T cgf
         Ls = jp.sum(b_hat * cgf[:, :2], axis=-1)  # (M,)
 
-        # 当前 b^T v
         bv = jp.sum(b_hat * v, axis=-1)           # (M,)
 
-        # 投影修正量 Δv_i = ((L - b^T v)/||b||^2) b
         diff = (Ls - bv)[:, None] / (jp.sum(b_hat * b_hat, axis=-1, keepdims=True) + 1e-9)
         delta = diff * b_hat  # (M,2)
 
-        # 只在 L > b^T v 时生效
         mask = (Ls > bv)[:, None]  # (M,1)
         delta = jp.where(mask, delta, 0.0)
 
-        # 一次 sweep: 把所有修正量加起来
         v_new = v + jp.mean(delta, axis=0)
 
-        # 拼接成 command
-        command = jp.hstack([1.0, v_new[0], v_new[1], 0.0]) * 0.75# NOTE
+        command = jp.hstack([1.0, v_new[0], v_new[1], 0.0]) * 0.75
 
-        # 小速度停止
         small_cond = jp.linalg.norm(command[1:4]) < 0.2
-        # command = command.at[1:4].set(jp.clip(command[1:4], -0.4, 0.4))
         command = jp.where(small_cond, self._stop_cmd, command)
         return command
     

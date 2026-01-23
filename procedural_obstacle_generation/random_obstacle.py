@@ -14,30 +14,26 @@ class Cfg:
     difficulty: float = 0.9
     seed: int = 42
 
-    # 尺寸（米）
     rect_factor: float = 1.0
     density_bias: float = 0.25
 
-    # 分方向尺寸范围（米）
-    block_dx_L: tuple = (0.3, 0.50)
+    block_dx_L: tuple = (0.3, 0.50)     # lateral left
     block_dz_L: tuple = (0.6, 0.80)
 
-    block_dx_R: tuple = (0.3, 0.50)
+    block_dx_R: tuple = (0.3, 0.50)     # lateral right
     block_dz_R: tuple = (0.6, 0.80)
 
-    block_dx_F: tuple = (0.10, 0.25)  # 地面：x方向长度分布
-    block_dy_F: tuple = (0.4, 1.60)  # 地面：y方向更长
+    block_dx_F: tuple = (0.10, 0.25)    # floor
+    block_dy_F: tuple = (0.4, 1.60) 
 
-    block_dx_C: tuple = (0.18, 0.60)  # 顶棚：x方向长度分布
-    block_dy_C: tuple = (0.4, 1.60)  # 顶棚：y方向更长
+    block_dx_C: tuple = (0.18, 0.60)    # ceiling
+    block_dy_C: tuple = (0.4, 1.60)  
 
-    # —— 新增：四方向 n_rect 独立控制；<=0 表示自动根据难度估计 ——
     n_rect_L: int = 9 # 0-9
     n_rect_R: int = 9 # 0-9
     n_rect_F: int = 3 # 0-3
     n_rect_C: int = 3 # 0-3
 
-    # 通行带中心与宽度
     y_center: float = 0.0
     gap_half_min: float = 0.16
     gap_half_max: float = 0.3
@@ -45,40 +41,33 @@ class Cfg:
     curve_knots_per_m: float = 0.9
     curve_smooth_vox: int = 9
 
-    # 左右墙从墙侧长入
     lr_thick_ratio_min: float = 0.3
     lr_thick_ratio_max: float = 1.0
 
-    # S2 连续门控（地面不 gate；L/R 共用；C 独立）
     gate_segments_per_meter: float = 0.8
     gate_min_len: float = 0.30
     gate_max_len: float = 0.40
     gate_join_gap: float = 0.2
     gate_dir_jitter: float = 0.10
 
-    # 地面/顶棚限制
     floor_max_h: float = 0.25
     ceil_min_z:  float = 1.0
 
-    # —— 新增：S3 旋转扰动角度上限（度）——
     rot_max_deg_L: float = 10.0
     rot_max_deg_R: float = 10.0
     rot_max_deg_F: float = 8.0
     rot_max_deg_C: float = 10.0
 
-    # 形态学闭运算
     closing_iters: int = 1
     closing_kernel: int = 3
 
-    # S5：窄切面放宽
     narrow_thresh: float = 0.45
     widen_extra:   float = 0.2
     top_band_z:    float = 0.30
     bot_band_z:    float = 0.20
 
 
-# ===================== 工具函数 =====================
-def _lerp(a, b, t):  # 线性插值，t∈[0,1]
+def _lerp(a, b, t): 
     return a + (b - a) * float(np.clip(t, 0.0, 1.0))
 
 def make_axes(cfg: Cfg):
@@ -127,7 +116,7 @@ def rect_mask_xy(Nx, Ny, x_min, x_max, n_rect, min_wx, max_wx, min_wy, max_wy, d
     M = np.zeros((Nx, Ny), np.uint8)
     for _ in range(n_rect):
         wx = int(rng.integers(min_wx, max_wx+1))
-        wy = int(_lerp(min_wy, max_wy, difficulty)) # TODO
+        wy = int(_lerp(min_wy, max_wy, difficulty)) 
         wx = max(wx, 1); wy = max(wy, 1)
         if wx > Nx: wx = Nx
         if wy > Ny: wy = Ny
@@ -142,14 +131,12 @@ def closing_opening_padded(occ, iters=3, kernel=3):
     pad = max(1, rad)
     se = np.ones((kernel, kernel, kernel), dtype=bool)
 
-    # pad
     occ_pad = np.pad(
         occ.astype(bool),
         ((pad,pad),(pad,pad),(pad,pad)),
         mode='constant', constant_values=True
     )
 
-    # 先闭运算（膨胀+侵蚀，填补缝隙）
     occ_closed = binary_closing(occ_pad, structure=se, iterations=iters)
 
     occ_pad[:pad] = True
@@ -158,46 +145,34 @@ def closing_opening_padded(occ, iters=3, kernel=3):
     occ_pad[:,-pad:] = True
     occ_pad[:,:,:pad] = True
     occ_pad[:,:,-pad:] = True
-    # 再开运算（侵蚀+膨胀，去掉毛刺）
-    # se = np.ones((1,1,1), dtype=bool)
     occ_closed_opened = binary_opening(occ_closed, structure=se, iterations=1)
 
-    # 去掉 pad
     occ_crop = occ_closed_opened[pad:-pad, pad:-pad, pad:-pad]
     return occ_crop.astype(bool)
 
 def get_elevation(obs_mask: np.ndarray):
     nonzero_mask = obs_mask == 0
 
-    # 找到最低的非零 z 索引
     ground_idx = np.argmax(nonzero_mask, axis=2)
-    # 若某列全为 0，则 argmax 返回 0，需要用 any 检查
-    ground_idx[~np.any(nonzero_mask, axis=2)] = -1  # 无障碍处标记为 -1
+    ground_idx[~np.any(nonzero_mask, axis=2)] = -1 
 
-    # 找到最高的非零 z 索引：从顶部反转再 argmax
     ceil_idx = obs_mask.shape[2] - 1 - np.argmax(nonzero_mask[..., ::-1], axis=2)
     ceil_idx[~np.any(nonzero_mask, axis=2)] = -1
     return ground_idx, ceil_idx
 
 def extract_surface_voxels(occ: np.ndarray, structure=None) -> np.ndarray:
-    """
-    提取表面 voxel，但保留 grid 边界 voxel
-    """
-    # 侵蚀整个 grid
     structure = np.ones((3,3,3), dtype=bool)
     eroded = binary_erosion(occ, structure=structure, border_value=1)
-    # 保留边界 voxel
     eroded[0,:,:] = occ[0,:,:]
     eroded[-1,:,:] = occ[-1,:,:]
     eroded[:,0,:] = occ[:,0,:]
     eroded[:,-1,:] = occ[:,-1,:]
     eroded[:,:,0] = occ[:,:,0]
     eroded[:,:,-1] = occ[:,:,-1]
-    # 表面 voxel = 原始 occ - 侵蚀
     surface = occ & (~eroded)
 
     return surface
-# 通行带
+
 def make_y_center_curve(cfg: Cfg, xv, rng, anchor_len=0.30, margin=0.05):
     Nx = len(xv)
     base = _perlin1d_0_1(Nx, int(cfg.curve_knots_per_m * cfg.Lx)+2, cfg.curve_smooth_vox, rng)
@@ -220,8 +195,7 @@ def make_gap_half_curve_jumpy(cfg: Cfg, xv, rng, min_seg=0.18, max_seg=0.60, smo
     g = np.empty(Nx, np.float32); i = 0
     while i < Nx:
         L = int(rng.integers(min_seg_v, max_seg_v+1))
-        # 35% 贴近最小缝，其余均匀到最大缝
-        if rng.random() < 0.13 * (1 + cfg.difficulty): # TODO
+        if rng.random() < 0.13 * (1 + cfg.difficulty):
             target = cfg.gap_half_min + 0.04 * rng.random()
         else:
             target = cfg.gap_half_min + (cfg.gap_half_max - cfg.gap_half_min) * rng.random()
@@ -237,7 +211,6 @@ def passband_indices_from_curve(yv, y_curve, gap_half_curve):
     j_right = np.searchsorted(yv, y_right, side='left')
     return j_left.astype(np.int32), j_right.astype(np.int32)
 
-# 构建 3D：L/R 用 XZ 掩码沿 y 生长；F/C 用 XY 掩码沿 z 生长
 def build_occ_from_masks_thick_xyxz(cfg: Cfg,
     L_mask_xz, R_mask_xz,    # (Nx, Nz)
     F_mask_xy, C_mask_xy,    # (Nx, Ny)
@@ -247,7 +220,6 @@ def build_occ_from_masks_thick_xyxz(cfg: Cfg,
     Nx, Ny, Nz = len(xv), len(yv), len(zv)
     vox = cfg.voxel
 
-    # 左右厚度（沿 y）
     tL_max = j_left_cut.copy()
     tR_max = (Ny - j_right_cut).copy()
     # lr_min, lr_max = cfg.lr_thick_ratio_min, cfg.lr_thick_ratio_max
@@ -297,8 +269,6 @@ def build_occ_from_masks_thick_xyxz(cfg: Cfg,
     if C_mask_xy.any() and c_max > 0:
         sel = np.where(C_mask_xy==1)
         ceil_v[sel]  = np.random.default_rng(cfg.seed+654).integers(c_min,  c_max+1, size=sel[0].size) # TODO
-    # breakpoint()
-    # 3D 体素
     J = np.arange(Ny, dtype=np.int32)[None, :, None]
     K = np.arange(Nz, dtype=np.int32)[None, None, :]
 
@@ -311,29 +281,22 @@ def build_occ_from_masks_thick_xyxz(cfg: Cfg,
 
     return occ_left | occ_right | occ_floor | occ_ceil
 
-# 简单旋转扰动（不使用 Perlin）：二维掩码就地旋转，保持尺寸
 def rotate_mask_2d(mask: np.ndarray, max_deg: float, rng) -> np.ndarray:
     if max_deg <= 0: return mask
     ang = float(rng.uniform(-max_deg, max_deg))
     R = ndi_rotate(mask.astype(np.uint8), angle=ang, reshape=False,
                    order=0, mode='constant', cval=0.0, prefilter=False)
     return (R > 0).astype(np.uint8)
+
 def sample_gate_segments(
     Nx, p_x, rng,
     min_len_vox, max_len_vox,
     nseg, gap_min_vox,
     jitter=0.0
 ):
-    """
-    在 x 轴上生成门控 keep 段:
-    - 每段长度 ∈ [min_len_vox, max_len_vox]
-    - 相邻门段之间至少 gap_min_m (转换为体素)
-    - 不再后处理缝合，而是直接避免产生小缺口
-    """
     # gap_min_vox = max(1, int(np.ceil(gap_min_m / cfg.voxel)))
     keep = np.zeros(Nx, np.uint8)
 
-    # 权重分布（带扰动）
     w = np.asarray(p_x, np.float32)
     if jitter > 1e-6:
         w = np.clip(w * (1.0 + jitter * rng.standard_normal(Nx).astype(np.float32)), 1e-6, None)
@@ -347,7 +310,6 @@ def sample_gate_segments(
         L  = int(rng.integers(min_len_vox, max_len_vox+1))
         i1 = min(Nx, i0 + L)
 
-        # 检查与已有段的间隔
         # ok = True
         # for (s, e) in placed:
         #     if not (i1 + gap_min_vox <= s or i0 >= e + gap_min_vox):
@@ -363,45 +325,36 @@ def sample_gate_segments(
     return keep
 
 
-# ===================== 主流程 =====================
 def generate_and_save(cfg: Cfg, prefix="occ", save=True):
     rng = np.random.default_rng(cfg.seed)
     xv, yv, zv = make_axes(cfg)
     Nx, Ny, Nz = len(xv), len(yv), len(zv)
 
-    # 通行带曲线 & 随机半宽（含突变）
     y_curve = make_y_center_curve(cfg, xv, np.random.default_rng(cfg.seed+1))
     gap_half_curve = make_gap_half_curve_jumpy(cfg, xv, np.random.default_rng(cfg.seed+2))
 
-    # ---- 预计算 y_curve 的弯曲强度 0..1 ----
     dx = float(np.mean(np.diff(xv)))  # 一般等距，≈ cfg.voxel
     ypp = np.zeros_like(y_curve, dtype=np.float32)
-    # 二阶中心差分：越大越弯
     ypp[1:-1] = (y_curve[2:] - 2*y_curve[1:-1] + y_curve[:-2]) / (dx*dx)
     bend = np.abs(ypp)
 
-    # 为了鲁棒，按分位数归一化（避免极端异常值主导）
     den = np.percentile(bend, 90) + 1e-6
     bend01 = np.clip(bend / den, 0.0, 1.0)
     # gap_half_curve = gap_half_curve * (1.0 + 30.8 * bend01 * bend01)
-    # print(gap_half_curve)
     
     j_left_cut, j_right_cut = passband_indices_from_curve(yv, y_curve, gap_half_curve)
 
-    # ---- S1：生成基础块（F 只 1 块；F/C 在 y 方向更长） ----
     def vox_range(r_m):
         lo = max(2, int(np.ceil(r_m[0] / cfg.voxel)))
         hi = max(lo, int(np.ceil(r_m[1] / cfg.voxel)))
         return lo, hi
 
-    # 体素尺寸
     min_wx_L, max_wx_L = vox_range(cfg.block_dx_L);  min_wz_L, max_wz_L = vox_range(cfg.block_dz_L)
     min_wx_R, max_wx_R = vox_range(cfg.block_dx_R);  min_wz_R, max_wz_R = vox_range(cfg.block_dz_R)
 
     min_wx_F, max_wx_F = vox_range(cfg.block_dx_F);  min_wy_F, max_wy_F = vox_range(cfg.block_dy_F)
     min_wx_C, max_wx_C = vox_range(cfg.block_dx_C);  min_wy_C, max_wy_C = vox_range(cfg.block_dy_C)
 
-    # n_rect 分开控制（<=0 自动估计）
     def auto_nrect(min_wx, scale=1.0):
         base = max(1, int(cfg.rect_factor * (Nx / min_wx)))
         return max(1, int(np.round((cfg.density_bias + cfg.difficulty) * base * scale)))
@@ -413,8 +366,6 @@ def generate_and_save(cfg: Cfg, prefix="occ", save=True):
 
     rngL, rngR, rngF, rngC = [np.random.default_rng(cfg.seed + s) for s in (11, 22, 33, 44)]
 
-    # 墙体：XZ 平面
-    # 起点和终点的 x 坐标
     x_origin = cfg.origin_w[0]
     x_start = cfg.start_w[0] + 0.2
     x_goal  = cfg.goal_w[0] - 0.2
@@ -425,7 +376,6 @@ def generate_and_save(cfg: Cfg, prefix="occ", save=True):
     L_mask_xz = rect_mask_xz(Nx, Nz, Nx_min, Nx_max, n_rect_L, min_wx_L, max_wx_L, min_wz_L, max_wz_L, rngL)
     R_mask_xz = rect_mask_xz(Nx, Nz, Nx_min, Nx_max, n_rect_R, min_wx_R, max_wx_R, min_wz_R, max_wz_R, rngR)
 
-    # 地/顶：XY 平面
     F_mask_xy = rect_mask_xy(Nx, Ny, Nx_min, Nx_max, n_rect_F, min_wx_F, max_wx_F, min_wy_F, max_wy_F, cfg.difficulty, rngF)
     C_mask_xy = rect_mask_xy(Nx, Ny, Nx_min, Nx_max, n_rect_C, min_wx_C, max_wx_C, min_wy_C, max_wy_C, cfg.difficulty, rngC)
 
@@ -434,10 +384,6 @@ def generate_and_save(cfg: Cfg, prefix="occ", save=True):
     if save:
         torch.save(torch.from_numpy(occ_S1.astype(np.uint8)), f"{prefix}_01_blocks.pt")
 
-    # ---- S2：连续门控（地面不 gate；L/R 共用；C 独立） + 起终点禁障 ----
-    # p_x = 0.5 * np.ones(Nx, np.float32)  # 简洁：常量权重
-
-    # 只在 [x_min, x_max] 内赋值 0.5，其它为 0
     p_x = np.zeros(Nx, np.float32)
     mask = (xv >= x_min) & (xv <= x_max)
     p_x[mask] = 0.5
@@ -452,7 +398,7 @@ def generate_and_save(cfg: Cfg, prefix="occ", save=True):
 
     L_mask2_xz = L_mask_xz #* keep_LR[:, None]
     R_mask2_xz = R_mask_xz #* keep_LR[:, None]
-    F_mask2_xy = F_mask_xy  # 地面不 gate
+    F_mask2_xy = F_mask_xy 
     C_mask2_xy = C_mask_xy #* keep_C[:, None]
 
     occ_S2 = build_occ_from_masks_thick_xyxz(cfg, L_mask2_xz, R_mask2_xz, F_mask2_xy, C_mask2_xy,
@@ -460,7 +406,6 @@ def generate_and_save(cfg: Cfg, prefix="occ", save=True):
     if save:
         torch.save(torch.from_numpy(occ_S2.astype(np.uint8)), f"{prefix}_02_gate.pt")
 
-    # ---- S3：旋转扰动（不使用 Perlin）----
     L_mask3_xz = rotate_mask_2d(L_mask2_xz, cfg.rot_max_deg_L, np.random.default_rng(cfg.seed+201))
     R_mask3_xz = rotate_mask_2d(R_mask2_xz, cfg.rot_max_deg_R, np.random.default_rng(cfg.seed+202))
     F_mask3_xy = rotate_mask_2d(F_mask2_xy, cfg.rot_max_deg_F, np.random.default_rng(cfg.seed+203))
@@ -468,11 +413,9 @@ def generate_and_save(cfg: Cfg, prefix="occ", save=True):
 
     occ_S3 = build_occ_from_masks_thick_xyxz(cfg, L_mask3_xz, R_mask3_xz, F_mask3_xy, C_mask3_xy,
                                              rng, j_left_cut, j_right_cut)
-    # === 用 XY 圆柱(半径0.5m)清空起点/终点附近的体素 ===
-    r = 0.4  # 米
+    r = 0.4  
     r2 = r * r
 
-    # 预计算 XY 网格距离（向量化）
     # dist2_start[j,i] = (x_i - x_s)^2 + (y_j - y_s)^2
     dx_s = xv[:, None] - cfg.start_w[0]   # (Nx,1)
     dy_s = yv[None, :] - cfg.start_w[1]   # (1,Ny)
@@ -482,28 +425,22 @@ def generate_and_save(cfg: Cfg, prefix="occ", save=True):
     dy_g = yv[None, :] - cfg.goal_w[1]
     dist2_goal = dx_g**2 + dy_g**2        # (Nx,Ny)
 
-    # 圆柱体：XY 内属于圆的点，沿全 Z 清空
     mask_start_xy = (dist2_start <= r2)   # (Nx,Ny)
     mask_goal_xy  = (dist2_goal  <= r2)   # (Nx,Ny)
 
-    # 对 occ_S2 清 0（False）
-    occ_S3[mask_start_xy, :] = False      # 等价于 occ_S2[mask_start_xy[:,:,None]] = False
+    occ_S3[mask_start_xy, :] = False      #  occ_S2[mask_start_xy[:,:,None]] = False
     occ_S3[mask_goal_xy,  :] = False
     if save:
         torch.save(torch.from_numpy(occ_S3.astype(np.uint8)), f"{prefix}_03_rot.pt")
 
-    # ---- S4：形态学闭运算 ----
     # occ_S4 = closing_padded(occ_S3, iters=cfg.closing_iters, kernel=cfg.closing_kernel)
     occ_S4 = closing_opening_padded(occ_S3, iters=cfg.closing_iters, kernel=cfg.closing_kernel)
 
     if save:
         torch.save(torch.from_numpy(occ_S4.astype(np.uint8)), f"{prefix}_04_closed.pt")
 
-    # ---- S5：沿 y_center(x) 放宽窄切面 ----
     occ_S5 = occ_S4.copy()
 
-    # 可选：轻微平滑（减少抖动），窗口 5
-    # bend01 = _smooth1d(bend01, 5)
 
     narrow_vox = int(np.ceil(cfg.narrow_thresh / cfg.voxel))
     widen_vox  = int(np.ceil(cfg.widen_extra   / cfg.voxel))
@@ -519,7 +456,6 @@ def generate_and_save(cfg: Cfg, prefix="occ", save=True):
         sl = occ_S5[i]  # (Ny, Nz)
         mid_band = sl[j_left_cut[i]:j_right_cut[i], :]
 
-        # 判断上下是否有障碍
         top_has = mid_band[:, k_top:].any()
         bot_has = mid_band[:, :k_bot+1].any()
         if not (top_has or bot_has):
@@ -534,23 +470,19 @@ def generate_and_save(cfg: Cfg, prefix="occ", save=True):
         jr = min(Ny, j_center[i] + (width//2 + widen_vox_local))
 
 
-        # ===== 新逻辑：确定 z 范围 =====
         z_low = 0
         z_high = Nz - 1
 
-        # 如果上方有障碍：取最小的 z 索引（低点）
         if top_has:
             idxs = np.argwhere(mid_band[:, k_top:])
             if idxs.size > 0:
                 z_high = k_top + idxs[:,1].min()
 
-        # 如果下方有障碍：取最大的 z 索引（高点）
         if bot_has:
             idxs = np.argwhere(mid_band[:, :k_bot+1])
             if idxs.size > 0:
                 z_low = idxs[:,1].max()
 
-        # 清理区域：仅在 [jl:jr, z_low:z_high+1]
         if z_low <= z_high:
             sl[jl:jr, z_low:z_high+1] = False
             occ_S5[i] = sl
@@ -559,15 +491,8 @@ def generate_and_save(cfg: Cfg, prefix="occ", save=True):
         torch.save(torch.from_numpy(occ_S5.astype(np.uint8)), f"{prefix}_05_final.pt")
     return occ_S5, xv, yv, zv
 
-    print("[done] saved:")
-    print("  01_blocks.pt")
-    print("  02_gate.pt")
-    print("  03_rot.pt")
-    print("  04_closed.pt")
-    print("  05_final.pt")
 
 
-# -------------------- 直接运行 --------------------
 if __name__ == "__main__":
     difficulty = 0.2
     seed = 42

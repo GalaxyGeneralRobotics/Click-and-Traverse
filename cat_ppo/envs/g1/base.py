@@ -16,7 +16,6 @@
 
 from typing import Any, Dict, Optional, Union
 
-from etils import epath
 import jax
 from ml_collections import config_dict
 import mujoco
@@ -37,17 +36,8 @@ class G1Env(mjx_env.MjxEnv):
     ) -> None:
         super().__init__(config, config_overrides)
 
-        # self._mj_model = mujoco.MjModel.from_xml_string(epath.Path(xml_path).read_text())
         self._mj_model = mujoco.MjModel.from_xml_path(xml_path)
         self._mj_model.opt.timestep = self.sim_dt
-
-        # Modify PD gains.
-        # self._mj_model.dof_damping[6:] = consts.KDs
-        # self._mj_model.actuator_gainprm[:, 0] = consts.KPs
-        # self._mj_model.actuator_biasprm[:, 1] = -consts.KPs
-        # if self._config.restricted_joint_range:
-        #     self._mj_model.jnt_range[1:] = consts.RESTRICTED_JOINT_RANGE
-        #     self._mj_model.actuator_ctrlrange[:] = consts.RESTRICTED_JOINT_RANGE
 
         self._mj_model.vis.global_.offwidth = 3840
         self._mj_model.vis.global_.offheight = 2160
@@ -56,7 +46,6 @@ class G1Env(mjx_env.MjxEnv):
         self._xml_path = xml_path
 
     # Sensor readings.
-
     def get_gravity(self, data: mjx.Data, frame: str) -> jax.Array:
         """Return the gravity vector in the world frame."""
         return mjx_env.get_sensor_data(
@@ -94,7 +83,6 @@ class G1Env(mjx_env.MjxEnv):
         )
 
     # Accessors.
-
     @property
     def xml_path(self) -> str:
         return self._xml_path

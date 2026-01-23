@@ -21,16 +21,6 @@ def base2navi_transform(base2world: np.ndarray) -> np.ndarray:
     return np.column_stack((x_axis, y_axis, z_axis))
 
 def world_to_navi_vel(navi2world_pose: np.ndarray, vel: np.ndarray) -> np.ndarray:
-    """
-    将速度从 world 坐标系转换到 navi 坐标系
-
-    Args:
-        navi2world_pose: (4,4) navi->world 齐次矩阵
-        vel: (N,3) 速度向量
-
-    Returns:
-        (N,3) navi 坐标系下的速度
-    """
     world2navi = np.linalg.inv(navi2world_pose)
     R = world2navi[:3, :3]
     return (R @ vel.T).T
@@ -65,22 +55,16 @@ def normalize(q):
     return q / np.linalg.norm(q, axis=-1, keepdims=True)
 
 def noisy_rootpose(qpos_root):
-    """对 rootpose 加噪声, 无 if/for"""
-    # 1. 平移噪声 ±2cm uniform
     dxyz = (np.random.rand(3) * 2 - 1) * 0.05  # (3,)
 
-    # 2. 旋转噪声 yaw ±2° uniform
-    angle = (np.random.rand() * 2 - 1) * np.deg2rad(10.0)  # 标量
+    angle = (np.random.rand() * 2 - 1) * np.deg2rad(10.0)  
     half = angle / 2.0
 
-    # 3. 构造绕Z轴的四元数扰动
     q_dr = np.array([np.cos(half), 0.0, 0.0, np.sin(half)])  # wxyz
 
-    # 4. 叠加到真实 root quat 并归一化
     q_gt = qpos_root[3:7]  # wxyz
     q_new = normalize(quat_mul(q_dr, q_gt))
 
-    # 5. 组合新 pose
     return np.concatenate([qpos_root[:3] + dxyz, q_new])  # (7,)
 
 
@@ -266,23 +250,13 @@ class PlayG1CatEnv(BaseEnv):
 
     def reset(self):
         self.mj_data.qpos[:7] = consts.DEFAULT_QPOS[:7]
-        # self.mj_data.qpos[:2] = np.random.uniform(-0.5, 0.5, size=2)
-        # self.mj_data.qpos[3:7] = consts.DEFAULT_QPOS[3:7] # NOTE
-        self.mj_data.qpos[7:] = self._default_qpos * np.random.uniform(0.5, 1.5, size=29)
-        # self.mj_data.qvel[:] = 0.0
-        # self.mj_data.qvel[0] = 1.0
-        # self.mj_data.qvel[1] = 1.0
+        self.mj_data.qpos[7:] = self._default_qpos
 
         mujoco.mj_forward(self.mj_model, self.mj_data)
         if not self.headless:
             self.viewer.sync()
-        # gait_freq = 1.1 # NOTE
-        # foot_height = 0.3
         phase_dt = 2 * np.pi * self.dt * self.gait_freq
 
-        # rtf = self.sample_field(self.gf, self.mj_data.site_xpos[self._pelvis_imu_site_id])
-        # rtf = self.sample_field(self.gf, self.mj_data.site_xpos[self._pelvis_imu_site_id].reshape(1, -1)).reshape(-1)
-        # command = self.compute_cmd_from_rtf(rtf)
         head_pos = self.mj_data.site_xpos[self._head_site_id]
         head_vel = np.zeros_like(head_pos)
         feet_pos = self.mj_data.site_xpos[self._feet_site_id]
@@ -324,7 +298,6 @@ class PlayG1CatEnv(BaseEnv):
             "motor_targets": self._default_qpos.copy(),# NOTE
             "timestamp_move2stop": 100,
             "gait_mask": np.zeros(2),
-            # "obs_history": np.zeros((self._config.history_len, self._config.num_obs)),
             "odom_delay": self.mj_data.qpos[:7],
             "headgf": headgf.copy(),
             "headbf": headbf.copy(),
@@ -423,12 +396,9 @@ class PlayG1CatEnv(BaseEnv):
         headbf, pelvbf, torsbf, feetbf, handsbf, kneesbf, shldsbf = np.split(all_bf, [1,2,3,5,7,9], axis=0)
         headdf, pelvdf, torsdf, feetdf, handsdf, kneesdf, shldsdf = np.split(all_df, [1,2,3,5,7,9], axis=0)
         command = self.compute_cmd_from_rtf(pelvgf.reshape(-1), np.concat([headgf, feetgf, handsgf]), np.concat([headbf, feetbf, handsbf]))
-        state.info["command"] = command.copy()#*state.info["last_flags"][0] # NOTE
+        state.info["command"] = command.copy()
         self._update_phase(state)
         move_flag = state.info["last_flags"][1]
-        # print(all_gf)
-        # print(all_bf)
-        # print(all_df)
         all_gf = all_gf * (move_flag[None] > 0.5) / (np.linalg.norm(all_gf, axis=-1, keepdims=True) + EPS)
         all_bf = all_bf / (np.linalg.norm(all_bf, axis=-1, keepdims=True) + EPS)
         headgf, pelvgf, torsgf, feetgf, handsgf, kneesgf, shldsgf = np.split(all_gf, [1,2,3,5,7,9], axis=0)
@@ -475,7 +445,6 @@ class PlayG1CatEnv(BaseEnv):
         phase_dt = state.info["phase_dt"]
         timestamp = state.info["timestamp_move2stop"]
 
-        # has_vel = np.linalg.norm(command[[0,2]]) > 0.2
         has_vel = np.linalg.norm(command) > 0.2
         had_vel = last_flags[0]
 
@@ -504,10 +473,8 @@ class PlayG1CatEnv(BaseEnv):
         state.info["gait_mask"] = np.float32(gait_mask)
 
     def get_obs(self, info):
-        # breakpoint()
         # pose
         gyro_pelvis = self.get_gyro("pelvis")
-        # gyro_pelvis = self.mj_data.qvel[3:6]
         gvec_pelvis = self.mj_data.site_xmat[self._pelvis_imu_site_id].reshape(
             3, 3
         ).T @ np.array([0, 0, -1])
@@ -567,7 +534,6 @@ class PlayG1CatEnv(BaseEnv):
             state = np.hstack(
                 [
                     # pose state
-                    # navi2world_pose,
                     gyro_pelvis,  # 3
                     gvec_pelvis,  # 3
                     # joint state
@@ -575,14 +541,12 @@ class PlayG1CatEnv(BaseEnv):
                     joint_vel[self.obs_joint_ids],  # 23
                     info["last_act"], # 12
                     info["motor_targets"][self.action_joint_ids],  # num_actions
-                    # obstacle_contact,
                     # commands
                     [move_flag],
                     command,  # 4
                     info["foot_height"], # 1
                     gait_phase,  # 4
                     linvel_pelvis,
-                    # info["rtf"].reshape(-1),
                     headgf.reshape(-1),
                     headbf.reshape(-1),
                     headdf.reshape(-1),
@@ -690,12 +654,6 @@ class PlayG1CatEnv(BaseEnv):
         return idx
 
     def sample_field(self, field, pos):
-        """
-        三线性插值 (完全向量化，无 if/for)
-        field: (Nx, Ny, Nz, C)
-        pos:   (N, 3)  世界坐标
-        return: (N, C)
-        """
         idx = self.world_to_grid(pos)                         # (N,3)
         x, y, z = idx[:, 0], idx[:, 1], idx[:, 2]            # (N,)
 
@@ -742,13 +700,13 @@ class PlayG1CatEnv(BaseEnv):
         current_goal_yaw = np.arctan2(goal2navi[1], goal2navi[0])
 
         command = np.stack([goal2navi[0], goal2navi[1], current_goal_yaw])
-        self.done = np.linalg.norm(goal2navi[:2]) < 0.2 # NOTE
+        self.done = np.linalg.norm(goal2navi[:2]) < 0.2 
         command[self.done] = 0.0 # assuming self._stop_cmd = [1, 0, 0, 0]
         return command
 
     def compute_cmd_from_rtf(self, rtf, cgf, cbf):
 
-        v = rtf[:2]* 0.7  # 只取 xy 分量
+        v = rtf[:2]* 0.7  
 
         bnorm = np.linalg.norm(cbf[:, :2], axis=-1, keepdims=True) + 1e-9
         b_hat = cbf[:, :2] / bnorm  # (M,2)
