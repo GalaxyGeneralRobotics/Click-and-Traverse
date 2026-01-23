@@ -1,4 +1,11 @@
-<h1><img src="assets/icon.png" width="40" style="vertical-align: middle;">  Click and Traverse </h1>
+
+<div align="center">
+  <h1 align="center"><img src="assets/icon.png" width="40" style="vertical-align: middle;">  Click and Traverse </h1>
+  <h3 align="center"> Tsinghua · GALBOT </h3>
+[中文](README_zh.md) | [English](README.md)
+
+:page_with_curl:[Paper](https://arxiv.org/abs/2601.16035) | :house:[Website](https://axian12138.github.io/CAT/) | :film_projector:[Video](https://www.youtube.com/watch?v=blek__Qf0Vc)
+</div>
 
 This repository provides the **official implementation** of the paper:
 
@@ -28,6 +35,17 @@ In this repository, we present:
   <img src="assets/pipeline.png" width="95%">
 </p>
 
+## Table of Contents
+
+- [Project Status](#project-status)
+- [Installation](#installation)
+- [Repository Structure](#repository-structure)
+- [Hybrid Obstacle Generation & HumanoidPF](#hybrid-obstacle-generation--humanoidpf)
+- [Traversal Skill Learning](#traversal-skill-learning)
+- [Citation](#citation)
+- [License](#license)
+- [Contributing](#contributing)
+- [Acknowledgement](#acknowledgement)
 ---
 
 ## Project Status
@@ -176,10 +194,10 @@ python train_batch.py
 
 Supported tasks:
 
-- `G1Cat`: lightweight task for sim-to-real deployment
-- `G1CatPri`: privileged task (used for distillation)
+- `G1Cat`: default task (can be directly used for sim-to-real deployment)
+- `G1CatPri`: privileged task (privileged observation is more informative for distilling generalist policies)
 
-Refer to `train_batch.py` for argument details.
+Refer to `train_batch.py` for args details.
 
 
 `train_batch.py` will automatically convert checkpoints to ONNX format. If you customize the policy architecture, you may need to convert checkpoints to ONNX manually:
@@ -247,3 +265,8 @@ Contributions are welcome. Please open an issue to discuss major changes or subm
 ## Acknowledgement
 We thank the MuJoCo Playground for providing a convenient simulation framework.
 
+---
+
+# Contact Us 
+
+If you'd like to discuss anything, feel free to send an email to xue-h21@mails.tsinghua.edu.cn or add WeChat: xh15158435129.
