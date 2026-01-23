@@ -4,7 +4,7 @@ This repository provides the **official implementation** of the paper:
 
 > **Collision-Free Humanoid Traversal in Cluttered Indoor Scenes**  
 > *Han Xue et al.*  
-> arXiv preprint
+> arXiv preprint: [arXiv:2601.16035](https://arxiv.org/abs/2601.16035)
 
 The project addresses the problem of enabling **humanoid robots to safely traverse cluttered indoor environments**. We propose a learning-based framework that combines:
 
@@ -179,7 +179,7 @@ python -m cat_ppo.eval.brax2onnx \
 
 To evaluate trained policies, ensure the MuJoCo XML (`data/assets/unitree_g1/scene_mjx_feetonly_mesh.xml`) obstacle is changed to corresponding name. For instance, if the obstacle name is `narrow1`, replace the `file` path with the directory name of the target scene.
 ```xml
-        <mesh name="scene_mesh" file="../TypiObs/narrow1/obs.obj"/>
+<mesh name="scene_mesh" file="../TypiObs/narrow1/obs.obj"/>
 ```
 Then run:
 ```bash
@@ -189,7 +189,7 @@ python -m cat_ppo.eval.mj_onnx_play \
   --obs_name narrow1
 ```
 
-To evaluate the model with prior knowledge, run:
+To evaluate the model with privileged observation, run:
 ```bash
 python -m cat_ppo.eval.mj_onnx_play \
   --task G1CatPri --pri \
@@ -226,4 +226,7 @@ This project is released under the terms of the LICENSE file included in this re
 ## Contributing
 
 Contributions are welcome. Please open an issue to discuss major changes or submit a pull request directly.
+
+## Acknowledgement
+We thank the MuJoCo Playground for providing a convenient simulation framework.
 
