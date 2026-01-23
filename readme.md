@@ -1,17 +1,32 @@
-# Collision-Free Humanoid Traversal in Cluttered Indoor Scenes
+# <h1><img src="assets/icon.png" width="50" style="vertical-align: middle;">  Click and Traverse </h1>
 
 This repository provides the **official implementation** of the paper:
 
 > **Collision-Free Humanoid Traversal in Cluttered Indoor Scenes**  
 > *Han Xue et al.*  
 > arXiv preprint: [arXiv:2601.16035](https://arxiv.org/abs/2601.16035)
+> project page: [https://axian12138.github.io/CAT/](https://axian12138.github.io/CAT/)
 
-The project addresses the problem of enabling **humanoid robots to safely traverse cluttered indoor environments**. We propose a learning-based framework that combines:
+
+The project addresses the problem of enabling humanoid robots to safely traverse **cluttered indoor scenes**, which we define as environments that simultaneously exhibit:
+
+- **Full-spatial constraints**: obstacles jointly present at the *ground*, *lateral*, and *overhead* levels, restricting the humanoid’s motion in all spatial dimensions.
+- **Intricate geometries**: obstacles with complex, irregular shapes that go beyond simple primitives such as rectangular blocks or regular polyhedra.
+
+<p align="center">
+  <img src="assets/teaser.png" width="40%">
+  <img src="assets/comparison.png" width="50%">
+</p>
+
+In this repository, we present:
 
 - **Humanoid Potential Field (HumanoidPF)**: a structured representation encoding spatial relationships between the humanoid body and surrounding obstacles;
 - **Hybrid scene generation**: realistic 3D indoor scene crops combined with procedurally synthesized obstacles;
 - **Reinforcement learning for specialist and generalist policies**, respectively trained on specific scenes and distilled to a generalist policy.
 
+<p align="center">
+  <img src="assets/pipeline.png" width="95%">
+</p>
 
 ---
 
