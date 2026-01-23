@@ -1,6 +1,7 @@
 <div align="center">
   <h1 align="center"><img src="assets/icon.png" width="40" style="vertical-align: middle;">  Click and Traverse </h1>
   <h3 align="center"> 清华 · 银河 </h3>
+  
 [中文](README_zh.md) | [English](README.md)
 
 :page_with_curl:[论文](https://arxiv.org/abs/2601.16035) | :house:[项目主页](https://axian12138.github.io/CAT/) | :film_projector:[视频](https://www.youtube.com/watch?v=blek__Qf0Vc)
