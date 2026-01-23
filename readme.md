@@ -1,11 +1,11 @@
-# <h1><img src="assets/icon.png" width="50" style="vertical-align: middle;">  Click and Traverse </h1>
+# <h1><img src="assets/icon.png" width="40" style="vertical-align: middle;">  Click and Traverse </h1>
 
 This repository provides the **official implementation** of the paper:
 
 > **Collision-Free Humanoid Traversal in Cluttered Indoor Scenes**  
 > *Han Xue et al.*  
-> arXiv preprint: [arXiv:2601.16035](https://arxiv.org/abs/2601.16035)
-> project page: [https://axian12138.github.io/CAT/](https://axian12138.github.io/CAT/)
+> arXiv preprint: [arXiv:2601.16035](https://arxiv.org/abs/2601.16035).
+> project page: [https://axian12138.github.io/CAT/](https://axian12138.github.io/CAT/).
 
 
 The project addresses the problem of enabling humanoid robots to safely traverse **cluttered indoor scenes**, which we define as environments that simultaneously exhibit:
@@ -241,6 +241,8 @@ This project is released under the terms of the LICENSE file included in this re
 ## Contributing
 
 Contributions are welcome. Please open an issue to discuss major changes or submit a pull request directly.
+
+---
 
 ## Acknowledgement
 We thank the MuJoCo Playground for providing a convenient simulation framework.
