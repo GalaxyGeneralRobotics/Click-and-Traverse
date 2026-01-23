@@ -12,12 +12,12 @@
 > **Collision-Free Humanoid Traversal in Cluttered Indoor Scenes**
 >  *Han Xue et al* 
 >  arXiv 预印本: [arXiv:2601.16035](https://arxiv.org/abs/2601.16035)<br>
-> 项目主页: [https://axian12138.github.io/CAT/](https://axian12138.github.io/CAT/).
+>  项目主页: [https://axian12138.github.io/CAT/](https://axian12138.github.io/CAT/).
 
 
-本项目研究如何使类人机器人在**杂乱的室内场景**中安全穿行。我们将**杂乱的室内场景**定义为同时具有：
+本项目研究如何使人形机器人在**杂乱的室内场景**中安全穿行。我们将**杂乱的室内场景**定义为同时具有：
 
-- **全空间约束**：地面、侧向以及头顶方向的障碍同时存在，限制了类人机器人在三维空间中的移动。
+- **全空间约束**：地面、侧向以及头顶方向的障碍同时存在，限制了人形机器人在三维空间中的移动。
 - **复杂几何形状**：障碍物具有复杂、非规则的形状，而非简单的矩形或规则多面体等原始几何体。
 
 <p align="center">
