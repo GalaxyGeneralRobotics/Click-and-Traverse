@@ -11,7 +11,7 @@
 本仓库**官方实现**了论文：
 
 > **Collision-Free Humanoid Traversal in Cluttered Indoor Scenes**
->  *Han Xue et al* 
+>  *Han Xue et al.* 
 >  arXiv 预印本: [arXiv:2601.16035](https://arxiv.org/abs/2601.16035)<br>
 >  项目主页: [https://axian12138.github.io/CAT/](https://axian12138.github.io/CAT/).
 
@@ -43,10 +43,11 @@
 - [仓库结构](#仓库结构)
 - [混合障碍生成与 HumanoidPF](#混合障碍生成与-humanoidpf)
 - [穿行技能学习](#穿行技能学习)
+- [相关项目](#相关项目)
 - [引用](#引用)
 - [许可证](#许可证)
-- [贡献](#贡献)
 - [致谢](#致谢)
+- [联系我们](#联系我们)
 ---
 
 ## 项目状态
@@ -209,29 +210,22 @@ python -m cat_ppo.eval.brax2onnx \
 
 ### 评估
 
-评估已训练策略时，确保 MuJoCo XML（`data/assets/unitree_g1/scene_mjx_feetonly_mesh.xml`）中的障碍 `file` 路径指向目标场景。例如，如果障碍名是 `narrow1`，则替换为：
-
-```xml
-<mesh name="scene_mesh" file="../TypiObs/narrow1/obs.obj"/>
-```
-
-然后运行：
-
+评估模型时（无特权观测），运行：
 ```bash
-python -m cat_ppo.eval.mj_onnx_play \
-  --task G1Cat \
-  --exp_name 12151522_G1LocoPFR10_SlowV2OdonoiseV2_xP0xMxK00xnarrow1 \
-  --obs_name narrow1
+python -m cat_ppo.eval.mj_onnx_play --task G1Cat --exp_name 12051223_G1LocoPFR10_OdonoiseSlowV2_xP2xMxK00xlowcorner --obs_name lowcorner
 ```
 
-若使用带特权观测的模型进行评估：
-
+评估模型时（有特权观测），运行：
 ```bash
-python -m cat_ppo.eval.mj_onnx_play \
-  --task G1CatPri --pri \
-  --exp_name 01202236_G1Cat_debug_xT00xempty \
-  --obs_name empty
+python -m cat_ppo.eval.mj_onnx_play --task G1CatPri --pri --exp_name 10140612_G1LocoPF7_v4_xP1xMxK004xD8101S4 --obs_name D8G0L1O1S4
 ```
+
+---
+
+## 相关项目
+
+- [OpenWBT](https://github.com/GalaxyGeneralRobotics/OpenWBT)
+- [OpenTrack](https://github.com/GalaxyGeneralRobotics/OpenTrack)
 
 ---
 
@@ -259,18 +253,14 @@ python -m cat_ppo.eval.mj_onnx_play \
 
 ---
 
-## 贡献
-
-欢迎贡献。请先开 issue 讨论重大修改，或直接提交 pull request。
-
----
-
 ## 致谢
 
 感谢 MuJoCo Playground 提供了便利的仿真框架。
 
 ---
 
-# 联系方式
+# 联系我们
 
 如有讨论意向，可发送邮件至 xue-h21@mails.tsinghua.edu.cn 或添加微信：xh15158435129。
+
+欢迎贡献。请先开 issue 讨论重大修改，或直接提交 pull request。

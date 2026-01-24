@@ -42,10 +42,11 @@ In this repository, we present:
 - [Repository Structure](#repository-structure)
 - [Hybrid Obstacle Generation & HumanoidPF](#hybrid-obstacle-generation--humanoidpf)
 - [Traversal Skill Learning](#traversal-skill-learning)
+- [Related Projects](#related-projects)
 - [Citation](#citation)
 - [License](#license)
-- [Contributing](#contributing)
 - [Acknowledgement](#acknowledgement)
+- [Contact Us](#contact-us)
 ---
 
 ## Project Status
@@ -222,6 +223,13 @@ python -m cat_ppo.eval.mj_onnx_play --task G1CatPri --pri --exp_name 10140612_G1
 
 ---
 
+## Related Projects
+
+- [OpenWBT](https://github.com/GalaxyGeneralRobotics/OpenWBT)
+- [OpenTrack](https://github.com/GalaxyGeneralRobotics/OpenTrack)
+
+---
+
 ## Citation
 
 If you find this work useful, please cite:
@@ -246,12 +254,6 @@ This project is released under the terms of the LICENSE file included in this re
 
 ---
 
-## Contributing
-
-Contributions are welcome. Please open an issue to discuss major changes or submit a pull request directly.
-
----
-
 ## Acknowledgement
 We thank the MuJoCo Playground for providing a convenient simulation framework.
 
@@ -260,3 +262,5 @@ We thank the MuJoCo Playground for providing a convenient simulation framework.
 # Contact Us 
 
 If you'd like to discuss anything, feel free to send an email to xue-h21@mails.tsinghua.edu.cn or add WeChat: xh15158435129.
+
+Contributions are welcome. Please open an issue to discuss major changes or submit a pull request directly.
