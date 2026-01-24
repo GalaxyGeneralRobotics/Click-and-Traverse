@@ -99,7 +99,7 @@ python -m cat_ppo.utils.mj_playground_init
 
 ## Repository Structure
 
-Pre-trained checkpoints and scene assets can be downloaded from (coming soon):
+Pre-trained checkpoints and scene assets can be downloaded from:
 
 - **Google Drive**: https://drive.google.com/drive/folders/1q57nJJ6uC26RmmCuxYjv6q1zE1gnVFvr
 
@@ -120,7 +120,12 @@ Click-and-Traverse/
 │   └── utils/
 ├── data/                           # Assets, logs (checkpoints)
 │   ├── assets/
+│   |   ├── mujoco_menagerie/       # after mj_playground_init
+│   |   ├── RandObs/                # random obstacles
+│   |   ├── TypiObs/                # typical obstacles
+│   |   └── unitree_g1/             # humanoid assets
 │   └── logs/
+|       └── G1_mj_axis/             # downloaded checkpoints
 └── procedural_obstacle_generation/ # Obstacle generation
     ├── main.py
     ├── pf_modular.py               # HumanoidPF construction
@@ -213,20 +218,20 @@ python -m cat_ppo.eval.brax2onnx \
 
 To evaluate the model without privileged observation, run:
 ```bash
-python -m cat_ppo.eval.mj_onnx_play --task G1Cat --exp_name 12051223_G1LocoPFR10_OdonoiseSlowV2_xP2xMxK00xlowcorner --obs_name lowcorner
+python -m cat_ppo.eval.mj_onnx_play --task G1Cat --exp_name 12221455_G1LocoPFR10_SlowV2OdonoiseV2narrow1_xP3xMxK00xchest --obs_name bend
 ```
 
 To evaluate the model with privileged observation, run:
 ```bash
-python -m cat_ppo.eval.mj_onnx_play --task G1CatPri --pri --exp_name 10140612_G1LocoPF7_v4_xP1xMxK004xD8101S4 --obs_name D8G0L1O1S4
+python -m cat_ppo.eval.mj_onnx_play --task G1CatPri --pri --exp_name G1CatPri_narrow1 --obs_name narrow1
 ```
 
 ---
 
 ## Related Projects
 
-- [OpenWBT](https://github.com/GalaxyGeneralRobotics/OpenWBT)
-- [OpenTrack](https://github.com/GalaxyGeneralRobotics/OpenTrack)
+- [R2S2: Whole-body-control with various real-world-ready motor skills.](https://github.com/GalaxyGeneralRobotics/OpenWBT) & [code](https://github.com/GalaxyGeneralRobotics/OpenWBT)
+- [Any2Track: Foundational motion tracking to track any motions under any disturbances.](https://zzk273.github.io/Any2Track/) & [code](https://github.com/GalaxyGeneralRobotics/OpenTrack)
 
 ---
 

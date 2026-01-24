@@ -100,7 +100,7 @@ python -m cat_ppo.utils.mj_playground_init
 
 ## 仓库结构
 
-可下载的预训练检查点与场景资源（即将提供）：
+可下载的预训练 checkpoint 与场景资源：
 
 - **Google Drive**: https://drive.google.com/drive/folders/1q57nJJ6uC26RmmCuxYjv6q1zE1gnVFvr
 
@@ -122,7 +122,12 @@ Click-and-Traverse/
 │   └── utils/
 ├── data/                           # 资源、日志（检查点）
 │   ├── assets/
+│   |   ├── mujoco_menagerie/       # mj_playground_init 后
+│   |   ├── RandObs/                # 随机障碍
+│   |   ├── TypiObs/                # 典型障碍
+│   |   └── unitree_g1/             # 人形机器人资源
 │   └── logs/
+|       └── G1_mj_axis/             # 下载的检查点
 └── procedural_obstacle_generation/ # 障碍生成
     ├── main.py
     ├── pf_modular.py               # HumanoidPF 构建
@@ -224,8 +229,8 @@ python -m cat_ppo.eval.mj_onnx_play --task G1CatPri --pri --exp_name 10140612_G1
 
 ## 相关项目
 
-- [OpenWBT](https://github.com/GalaxyGeneralRobotics/OpenWBT)
-- [OpenTrack](https://github.com/GalaxyGeneralRobotics/OpenTrack)
+- [R2S2: 配备各种运动技能的全身控制。](https://github.com/GalaxyGeneralRobotics/OpenWBT) & [代码](https://github.com/GalaxyGeneralRobotics/OpenWBT)
+- [Any2Track: 在任何干扰下跟踪任何运动的运动跟踪。](https://zzk273.github.io/Any2Track/) & [代码](https://github.com/GalaxyGeneralRobotics/OpenTrack)
 
 ---
 

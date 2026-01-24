@@ -120,7 +120,7 @@ def set_scene_for_xml(xml_path, scene_path):
 
         scene_mesh.set("file", obs_obj_rel.as_posix())
 
-        tmp_xml_path = xml_dir / (xml_path.stem + "._tmp_scene.xml")
+        tmp_xml_path = xml_dir / (xml_path.stem + "_tmp.xml")
         tmp_xml_path.write_text(ET.tostring(root, encoding="unicode"), encoding="utf-8")
 
         return str(tmp_xml_path)

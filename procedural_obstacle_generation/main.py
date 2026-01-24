@@ -116,6 +116,15 @@ if __name__ == "__main__":
     # for difficulty, dL, dG, dO, seed in combos:
     #     rng = (dL + 0.5 * seed) * (dG + seed) * (dO + 1.5 * seed) + 1
     #     generate_random_obstacle(difficulty, int(rng), dL, dG, dO)
+    # difficulties = [0.7]
+    # d_Ls = [4]
+    # d_Gs = [0, 1, 2]
+    # d_Os = [0, 1, 2]
+    # seeds = [1,2]
+    # combos = itertools.product(difficulties, d_Ls, d_Gs, d_Os, seeds)
+    # for difficulty, dL, dG, dO, seed in combos:
+    #     rng = (dL + 0.5 * seed) * (dG + seed) * (dO + 1.5 * seed)
+    #     generate_random_obstacle(difficulty, int(rng), dL, dG, dO)
     # generate_typical_obstacle('ceil1')
     # generate_typical_obstacle('bar0')
     # generate_typical_obstacle('bar1')
@@ -125,13 +134,13 @@ if __name__ == "__main__":
     # generate_typical_obstacle('Mceil1')
     # generate_typical_obstacle('Mbar0')
     # generate_typical_obstacle('Mbar1')
-    # generate_typical_obstacle('Mceilbar0')
-    # generate_typical_obstacle('Mceilbar1')
+    generate_typical_obstacle('ceilbar0')
+    generate_typical_obstacle('ceilbar1')
     # generate_typical_obstacle('chest')
     # generate_typical_obstacle('Nbar0')
     # generate_typical_obstacle('Nbar1')
     # generate_typical_obstacle('doubar')
     # generate_typical_obstacle('lowcorner')
-    generate_typical_obstacle('hole')
+    # generate_typical_obstacle('hole')
     # generate_random_obstacle(0.8, 13, 1, 0, 0)
     # generate_random_obstacle(0.8, 4, 1, 0, 1)

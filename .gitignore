@@ -7,6 +7,7 @@ tmp/
 
 # Log files
 logs/
+*.zip
 
 # Data directories.
 checkpoints/
