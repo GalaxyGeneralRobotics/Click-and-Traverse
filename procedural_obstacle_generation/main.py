@@ -6,8 +6,9 @@ from pf_modular import make_sdf, make_guidance_field_progressive, grad3, PFConfi
 import numpy as np
 from utills import marching_cubes_mesh, occupancy_to_points, preview_matplotlib, combine_meshes
 import itertools
-def generate_random_obstacle(difficulty, seed, n_rect_L, n_rect_R, n_rect_F, n_rect_C):
-    prefix = f"D{int(difficulty*10)}_{n_rect_R:01d}{n_rect_F:01d}{n_rect_C:01d}_S{seed}/"
+def generate_random_obstacle(difficulty, seed, n_rect_R, n_rect_F, n_rect_C):
+    n_rect_L=n_rect_R
+    prefix = f"D{int(difficulty*10)}G{n_rect_F:01d}L{n_rect_R:01d}O{n_rect_C:01d}S{seed}/"
 
     print(prefix)
     save = False
@@ -19,12 +20,12 @@ def generate_random_obstacle(difficulty, seed, n_rect_L, n_rect_R, n_rect_F, n_r
         shutil.rmtree(prefix)
         return
 
-    os.makedirs(f"RandObs/{prefix}", exist_ok=True)
+    os.makedirs(f"../data/assets/RandObs/{prefix}", exist_ok=True)
     # pts = occupancy_to_points(obs_mask, voxel_size=obs_cfg.voxel)
     # preview_matplotlib(pts)
     spacing = (obs_cfg.voxel, obs_cfg.voxel, obs_cfg.voxel)
-    mesh = marching_cubes_mesh(obs_mask, spacing=spacing)
-    mesh.export(f"RandObs/{prefix}obs.obj")
+    mesh = better_mesh(spacing, obs_mask)
+    mesh.export(f"../data/assets/RandObs/{prefix}obs.obj")
 
     cfg = PFConfig()
     cfg.voxel = obs_cfg.voxel
@@ -47,8 +48,8 @@ def generate_random_obstacle(difficulty, seed, n_rect_L, n_rect_R, n_rect_F, n_r
     np.save(f"../data/assets/RandObs/{prefix}bf.npy",  bf)
     np.save(f"../data/assets/RandObs/{prefix}gf.npy",  gf)
     np.save(f"../data/assets/RandObs/{prefix}obs.npy", obs_mask.astype(np.uint8))
-    sur = extract_surface_voxels(obs_mask)
-    np.save(f"../data/assets/RandObs/{prefix}sur.npy", sur.astype(np.uint8))
+    # sur = extract_surface_voxels(obs_mask)
+    # np.save(f"../data/assets/RandObs/{prefix}sur.npy", sur.astype(np.uint8))
     # pts = occupancy_to_points(sur, voxel_size=obstacle_cfg.voxel)
     # preview_matplotlib(pts)
 
@@ -106,14 +107,31 @@ def better_mesh(spacing, obs_mask): # for mujoco visualization
     return mesh
 
 if __name__ == "__main__":
-    difficulties = [0.6, 0.7, 0.8]
-    d_Ls = [1,3]
-    d_Gs = [0, 1, 2]
-    d_Os = [0, 1, 2]
-    seeds = [1,2]
-    combos = itertools.product(difficulties, d_Ls, d_Gs, d_Os, seeds)
-    for difficulty, dL, dG, dO, seed in combos:
-        rng = (dL + 0.5 * seed) * (dG + seed) * (dO + 1.5 * seed) + 1
-        generate_random_obstacle(difficulty, int(rng), dL, dG, dO)
-    generate_typical_obstacle('ceil0')
-    generate_typical_obstacle('narrow1')
+    # difficulties = [0.8]
+    # d_Ls = [1,3]
+    # d_Gs = [0, 1, 2]
+    # d_Os = [0, 1, 2]
+    # seeds = [1,2]
+    # combos = itertools.product(difficulties, d_Ls, d_Gs, d_Os, seeds)
+    # for difficulty, dL, dG, dO, seed in combos:
+    #     rng = (dL + 0.5 * seed) * (dG + seed) * (dO + 1.5 * seed) + 1
+    #     generate_random_obstacle(difficulty, int(rng), dL, dG, dO)
+    # generate_typical_obstacle('ceil1')
+    # generate_typical_obstacle('bar0')
+    # generate_typical_obstacle('bar1')
+    # generate_typical_obstacle('bar2')
+    # generate_typical_obstacle('bar3')
+    # generate_typical_obstacle('Mceil0')
+    # generate_typical_obstacle('Mceil1')
+    # generate_typical_obstacle('Mbar0')
+    # generate_typical_obstacle('Mbar1')
+    # generate_typical_obstacle('Mceilbar0')
+    # generate_typical_obstacle('Mceilbar1')
+    # generate_typical_obstacle('chest')
+    # generate_typical_obstacle('Nbar0')
+    # generate_typical_obstacle('Nbar1')
+    # generate_typical_obstacle('doubar')
+    # generate_typical_obstacle('lowcorner')
+    generate_typical_obstacle('hole')
+    # generate_random_obstacle(0.8, 13, 1, 0, 0)
+    # generate_random_obstacle(0.8, 4, 1, 0, 1)

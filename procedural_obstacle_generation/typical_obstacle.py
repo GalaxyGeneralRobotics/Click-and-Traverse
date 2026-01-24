@@ -28,7 +28,7 @@ def build_obstacles(scene, grids):
         return obs_ceiling(X, Y, Z) | obs_easy_bar(X, Y, Z) | obs_narrow(X, Y, Z, gap_width=0.9)
     elif scene == "Mceilbar1":
         return obs_ceiling(X, Y, Z, z_low=1.05) | obs_shin_bar(X, Y, Z) | obs_narrow(X, Y, Z, gap_width=0.9)
-    elif scene == "Mhole0":
+    elif scene == "hole":
         return obs_ceiling(X, Y, Z) | obs_easy_bar(X, Y, Z) | obs_narrow(X, Y, Z, gap_width=0.5)
     elif scene == "empty":
         return obs_empty(X, Y, Z)
@@ -48,8 +48,8 @@ def build_obstacles(scene, grids):
         return obs_easy_bar(X, Y, Z) | obs_narrow(X, Y, Z, gap_width=0.3)
     elif scene == "doubar":
         return obs_double_knee_bars(X, Y, Z)
-    elif scene == "chest":
-        return obs_chest_1(X, Y, Z)
+    elif scene == "bend":
+        return obs_bend(X, Y, Z)
     elif scene == "lowcorner":
         return obs_low_corner(X, Y, Z)
     elif scene == "highcorner":
@@ -112,7 +112,7 @@ def obs_ankle_block_field(X, Y, Z, *, xs=(0.6, 0.9, 1.2, 1.5), y_span=0.35, h=0.
                      z0=0.0,      z1=h)
     return mask
 
-def obs_chest_1(X, Y, Z, *, x1=0.9, x2=1.3, thickness=0.24, y_cover=0.05, z0=0.5, z1=1.1):
+def obs_bend(X, Y, Z, *, x1=0.9, x2=1.3, thickness=0.24, y_cover=0.05, z0=0.5, z1=1.1):
     x0 = 1.0
     fin1 = _box(X, Y, Z, x0=x0 - thickness/2, x1=x0 + thickness/2, y0=-1.0, y1=0.1, z0=z1, z1=2.0)
     fin2 = _box(X, Y, Z, x0=x0 - thickness, x1=x0 + thickness, y0=0.18, y1=1.0, z0=0, z1=z0)

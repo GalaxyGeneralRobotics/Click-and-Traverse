@@ -210,24 +210,14 @@ python -m cat_ppo.eval.brax2onnx \
 
 ### Evaluation
 
-To evaluate trained policies, ensure the MuJoCo XML (`data/assets/unitree_g1/scene_mjx_feetonly_mesh.xml`) obstacle is changed to corresponding name. For instance, if the obstacle name is `narrow1`, replace the `file` path with the directory name of the target scene.
-```xml
-<mesh name="scene_mesh" file="../TypiObs/narrow1/obs.obj"/>
-```
-Then run:
+To evaluate the model without privileged observation, run:
 ```bash
-python -m cat_ppo.eval.mj_onnx_play \
-  --task G1Cat \
-  --exp_name 12151522_G1LocoPFR10_SlowV2OdonoiseV2_xP0xMxK00xnarrow1 \
-  --obs_name narrow1
+python -m cat_ppo.eval.mj_onnx_play --task G1Cat --exp_name 12051223_G1LocoPFR10_OdonoiseSlowV2_xP2xMxK00xlowcorner --obs_name lowcorner
 ```
 
 To evaluate the model with privileged observation, run:
 ```bash
-python -m cat_ppo.eval.mj_onnx_play \
-  --task G1CatPri --pri \
-  --exp_name 01202236_G1Cat_debug_xT00xempty \
-  --obs_name empty
+python -m cat_ppo.eval.mj_onnx_play --task G1CatPri --pri --exp_name 10140612_G1LocoPF7_v4_xP1xMxK004xD8101S4 --obs_name D8G0L1O1S4
 ```
 
 ---

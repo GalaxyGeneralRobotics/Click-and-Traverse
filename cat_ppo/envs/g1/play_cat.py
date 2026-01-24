@@ -87,13 +87,49 @@ def geoms_colliding(state: mujoco.MjData, geom1: int, geom2: int):
         return 0
     return get_collision_info(state.contact, geom1, geom2)[0] < 0
 
+from pathlib import Path
+import xml.etree.ElementTree as ET
+import os
+def set_scene_for_xml(xml_path, scene_path):
+        xml_dir = Path(xml_path).resolve().parent
+
+        xml_text = Path(xml_path).read_text(encoding="utf-8")
+
+        root = ET.fromstring(xml_text)
+
+        scene_mesh = None
+        for mesh in root.iter("mesh"):
+            if mesh.get("name") == "scene_mesh":
+                scene_mesh = mesh
+                break
+        if scene_mesh is None:
+            raise RuntimeError('Cannot find <mesh name="scene_mesh" ...> in the XML.')
+
+        obs_root = Path(scene_path).resolve()       # e.g., .../data/assets/TypiObs/narrow1
+        obs_obj_abs = obs_root / "obs.obj"
+        if not obs_obj_abs.exists():
+            raise FileNotFoundError(f"Obstacle mesh not found: {obs_obj_abs}")
+
+        obs_obj_rel = obs_obj_abs.relative_to(xml_dir) if obs_obj_abs.is_relative_to(xml_dir) \
+            else Path("../") / obs_obj_abs.relative_to(xml_dir.parent) 
+
+        try:
+            obs_obj_rel = obs_obj_abs.relative_to(xml_dir)
+        except ValueError:
+            obs_obj_rel = Path(os.path.relpath(obs_obj_abs, xml_dir))
+
+        scene_mesh.set("file", obs_obj_rel.as_posix())
+
+        tmp_xml_path = xml_dir / (xml_path.stem + "._tmp_scene.xml")
+        tmp_xml_path.write_text(ET.tostring(root, encoding="unicode"), encoding="utf-8")
+
+        return str(tmp_xml_path)
 
 class BaseEnv:
-    def __init__(self, task_type):
+    def __init__(self, task_type, config=None):
         xml_path = consts.task_to_xml(task_type)
-        if not isinstance(xml_path, str):
-            xml_path = str(xml_path)
-        self.mj_model = mujoco.MjModel.from_xml_path(xml_path)
+        tmp_xml = set_scene_for_xml(xml_path, config.pf_config.path)
+        self.mj_model = mujoco.MjModel.from_xml_path(tmp_xml)
         self.mj_data = mujoco.MjData(self.mj_model)
 
     def get_sensor_data(self, sensor_name: str) -> np.ndarray:
@@ -156,7 +192,7 @@ class PlayG1CatEnv(BaseEnv):
         sim_dt=0.002,
         headless=False,
     ):
-        super().__init__("mesh")
+        super().__init__("mesh", config)
         self.mj_model.opt.timestep = sim_dt
         self.headless = headless
         if not self.headless:
