@@ -854,6 +854,10 @@ class G1CatPriEnv(G1LocoEnv):
         re_gf = - penalty
 
         return jp.mean(re_gf)  # 
+
+    def _reward_tracking_root_field(self, cmd_vel: jax.Array, local_lin_vel: jax.Array) -> jax.Array:
+        lin_vel_error = jp.sum(jp.square(cmd_vel[:2] - local_lin_vel[:2]))
+        return jp.exp(-4.0 * lin_vel_error)
     
     def _cost_body_motion(
         self, local_lin_vel, local_ang_vel: jax.Array, cmd_vel: jax.Array
